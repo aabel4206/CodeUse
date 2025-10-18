@@ -8,6 +8,8 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from pathlib import Path
 from dataclasses import asdict
+import os
+from tool.orchestrator.state import AuditResult
 
 class ReportGenerator:
     """Generates comprehensive reports from tool execution."""
@@ -192,3 +194,12 @@ class ReportGenerator:
         except Exception as e:
             print(f"Error reading report {report_path}: {e}")
             return None
+
+
+# Utility: write canonical AuditResult JSON into runs/<id>/result.json
+def write_result_json(run_dir: str, audit: AuditResult) -> str:
+    path = os.path.join(run_dir, "result.json")
+    os.makedirs(run_dir, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(audit.model_dump(), f, indent=2)
+    return path
