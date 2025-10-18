@@ -49,9 +49,13 @@ async def execute(req: ExecRequest):
             page.set_default_timeout(5000)  # 5s per Playwright op
 
             await page.goto(str(req.url), timeout=10_000)
-            before_path = await actions.screenshot(page, run_id, f"step-{req.step}-before")
+            screenshots: List[Dict[str, Any]] = []
+            before_path = await actions.screenshot(
+                page, run_id, f"step-{req.step}-before"
+            )
+            screenshots.append({"label": "before", "path": before_path})
 
-            for call in req.actions:
+            for index, call in enumerate(req.actions, start=1):
                 action_fn = getattr(actions, call.fn, None)
                 if action_fn is None:
                     msg = f"Unknown action: {call.fn}"
@@ -66,6 +70,17 @@ async def execute(req: ExecRequest):
                     msg = f"Action {call.fn} failed: {exc}"
                     results.append({"fn": call.fn, "ok": False, "error": str(exc)})
                     errors.append(msg)
+                finally:
+                    label = f"step-{req.step}-after-action-{index}"
+                    try:
+                        shot_path = await actions.screenshot(page, run_id, label)
+                        screenshots.append(
+                            {"label": f"after_action_{index}", "path": shot_path}
+                        )
+                    except (PlaywrightTimeout, PlaywrightError, Exception) as shot_exc:
+                        errors.append(
+                            f"Screenshot after action {call.fn} failed: {shot_exc}"
+                        )
 
             if req.measure_hover:
                 metrics = await actions.measure_hover_metrics(page, req.selector)
@@ -75,16 +90,15 @@ async def execute(req: ExecRequest):
                     "after": await actions.get_computed_style(page, req.selector, ":hover"),
                 }
 
-            after_path = await actions.screenshot(page, run_id, f"step-{req.step}-after")
+            last_screenshot = (
+                screenshots[-1]["path"] if screenshots else before_path
+            )
 
             observation = {
                 "selector": req.selector,
                 "metrics": metrics,
-                "screenshots": {
-                    "before": before_path,
-                    "after": after_path,
-                },
-                "screenshot": after_path,
+                "screenshots": screenshots,
+                "screenshot": last_screenshot,
                 "url": await actions.current_url(page),
                 "errors": errors,
             }
