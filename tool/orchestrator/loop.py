@@ -1,14 +1,20 @@
-"""
-Main orchestration loop for the CodeUse tool.
-This module handles the coordination between different components.
-"""
+"""Main orchestration loop for the CodeUse tool."""
 
 import time
 from typing import Dict, Any, List, Optional
+
+try:  # Load environment variables from .env when available
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except Exception:
+    pass
+
 from .state import State
 from tool.orchestrator.state import ProbeEvent
 
-# Aggregation and persistence helpers (called at end of successful runs)
+# Normalization, aggregation, and persistence helpers
+from tool.orchestrator.adapter import normalize_with_openrouter
 from tool.reporter.aggregator import build_audit_result
 from tool.reporter.reporter import write_result_json
 
@@ -56,17 +62,37 @@ class Orchestrator:
         run_id: str,
         target_url: str,
         run_dir: str,
-        cta_info: Optional[Dict[str, Any]],
-        probe_events: List[ProbeEvent],
+        cta_info: Optional[Dict[str, Any]] = None,
+        probe_events: Optional[List[ProbeEvent]] = None,
         console_lines: List[Dict[str, Any]],
         link_probes: List[Dict[str, Any]],
         dom_scan: Optional[Dict[str, Any]],
+        raw_executor_blob: Optional[Dict[str, Any]] = None,
     ):
+        primary_cta = cta_info
+        events: List[ProbeEvent] = probe_events or []
+
+        if raw_executor_blob:
+            cta_dict, probe_event_dict = normalize_with_openrouter(raw_executor_blob)
+            primary_cta = cta_dict
+            try:
+                events = [ProbeEvent.model_validate(probe_event_dict)]
+            except Exception:
+                # As a fallback, keep raw dict wrapped into ProbeEvent model best-effort
+                events = []
+                try:
+                    events.append(ProbeEvent(**probe_event_dict))  # type: ignore[arg-type]
+                except Exception:
+                    pass
+
+        if not events:
+            events = []
+
         audit = build_audit_result(
             run_id=run_id,
             target_url=target_url,
-            primary_cta=cta_info,
-            probe_events=probe_events,
+            primary_cta=primary_cta,
+            probe_events=events,
             console_lines=console_lines,
             link_probes=link_probes,
             dom_scan=dom_scan or {},
