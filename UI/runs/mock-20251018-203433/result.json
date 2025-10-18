@@ -1,0 +1,67 @@
+{
+  "run_id": "mock-20251018-203433",
+  "created_at": "2025-10-18T20:34:33.279023+00:00",
+  "instruction": "Fix the hero hover animation so it uses brand.primary.",
+  "description": "Baseline capture of the hero hover interaction before applying brand.primary.",
+  "next_prompt": "Apply the brand.primary hover animation and verify computed styles update.",
+  "request": {
+    "id": "8a3d68ec-3e39-44ee-9ec6-ba7d5def58d5",
+    "tool": "codeuse-cli",
+    "arguments": [
+      "run",
+      "--instruction=\"Fix the hero hover animation so it uses brand.primary.\"",
+      "--mode=mock"
+    ],
+    "cwd": "C:\\Users\\aabel\\Downloads\\CodeUse",
+    "timeout_ms": 600000
+  },
+  "result": {
+    "status": "completed",
+    "exit_code": 0,
+    "duration_ms": 4875,
+    "started_at": "2025-10-18T20:34:33.279023+00:00",
+    "finished_at": "2025-10-18T20:34:38.154023+00:00",
+    "highlights": [
+      "Executor replayed hover interaction on Chromium demo page.",
+      "Observation log includes computed-style diff for brand color."
+    ],
+    "observations": [
+      {
+        "selector": "[data-testid=\"hero-cta\"]",
+        "severity": "warning",
+        "message": "Hover animation stays linear; expected spring transition with brand.primary color."
+      },
+      {
+        "selector": "[data-testid=\"stats-card\"]",
+        "severity": "info",
+        "message": "Card renders but text contrast is 3.9:1; flagging for design follow-up."
+      }
+    ],
+    "errors": [],
+    "description": "Baseline hover interaction replay for demo validation.",
+    "next_prompt": "Re-run the hover interaction after applying the brand-primary token."
+  },
+  "artifacts": [
+    {
+      "type": "screenshot",
+      "path": "runs/mock-20251018-203433/artifacts/hover-before.png"
+    },
+    {
+      "type": "screenshot",
+      "path": "runs/mock-20251018-203433/artifacts/hover-after.png"
+    },
+    {
+      "type": "json",
+      "path": "runs/mock-20251018-203433/artifacts/action_log.json"
+    },
+    {
+      "type": "markdown",
+      "path": "runs/mock-20251018-203433/summary.md"
+    }
+  ],
+  "notes": [
+    "Mock run generated locally; switch to --mode live once the orchestrator is ready.",
+    "Instruction captured: Fix the hero hover animation so it uses brand.primary.",
+    "Next prompt: Apply the brand.primary hover animation and rerun."
+  ]
+}

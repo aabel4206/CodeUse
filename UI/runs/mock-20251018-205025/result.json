@@ -1,0 +1,73 @@
+{
+  "run_id": "mock-20251018-205025",
+  "created_at": "2025-10-18T20:50:25.497385+00:00",
+  "instruction": "Find all UI issues on the hero page.",
+  "description": "Baseline capture of the hero hover interaction before applying brand.primary.",
+  "next_prompt": "Apply the brand.primary hover animation and verify computed styles update.",
+  "request": {
+    "id": "7f87fe25-1ef3-4423-8095-38204cfef365",
+    "tool": "codeuse-cli",
+    "arguments": [
+      "run",
+      "--instruction=\"Find all UI issues on the hero page.\"",
+      "--mode=mock"
+    ],
+    "cwd": "C:\\Users\\aabel\\Downloads\\CodeUse",
+    "timeout_ms": 600000
+  },
+  "result": {
+    "status": "completed",
+    "exit_code": 0,
+    "duration_ms": 4875,
+    "started_at": "2025-10-18T20:50:25.497385+00:00",
+    "finished_at": "2025-10-18T20:50:30.372385+00:00",
+    "highlights": [
+      "Executor replayed hover interaction on Chromium demo page.",
+      "Observation log includes computed-style diff for brand color."
+    ],
+    "observations": [
+      {
+        "selector": "[data-testid=\"hero-cta\"]",
+        "severity": "warning",
+        "message": "Hover animation stays linear; expected spring transition with brand.primary color.",
+        "description": "CTA button hover state still uses slate palette and linear timing, breaking brand guidelines.",
+        "screenshot": "runs/mock-20251018-205025/artifacts/hover-before.png",
+        "suggested_prompt": "Update the hero CTA hover styles to use var(--brand-primary) with a spring easing curve."
+      },
+      {
+        "selector": "[data-testid=\"stats-card\"]",
+        "severity": "info",
+        "message": "Card renders but text contrast is 3.9:1; flagging for design follow-up.",
+        "description": "Stat card copy on the gradient background falls below AA contrast; request palette adjustment.",
+        "screenshot": "runs/mock-20251018-205025/artifacts/hover-after.png",
+        "suggested_prompt": "Adjust stats-card text color to meet 4.5:1 contrast while keeping the existing gradient."
+      }
+    ],
+    "errors": [],
+    "description": "Baseline hover interaction replay for demo validation.",
+    "next_prompt": "Re-run the hover interaction after applying the brand-primary token."
+  },
+  "artifacts": [
+    {
+      "type": "screenshot",
+      "path": "runs/mock-20251018-205025/artifacts/hover-before.png"
+    },
+    {
+      "type": "screenshot",
+      "path": "runs/mock-20251018-205025/artifacts/hover-after.png"
+    },
+    {
+      "type": "json",
+      "path": "runs/mock-20251018-205025/artifacts/action_log.json"
+    },
+    {
+      "type": "markdown",
+      "path": "runs/mock-20251018-205025/summary.md"
+    }
+  ],
+  "notes": [
+    "Mock run generated locally; switch to --mode live once the orchestrator is ready.",
+    "Instruction captured: Find all UI issues on the hero page.",
+    "Next prompt: Apply the brand.primary hover animation and rerun."
+  ]
+}

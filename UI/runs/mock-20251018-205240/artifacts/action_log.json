@@ -1,0 +1,25 @@
+{
+  "steps": [
+    {
+      "action": "navigate",
+      "target": "http://localhost:4173/"
+    },
+    {
+      "action": "hover",
+      "target": "[data-testid=\"hero-cta\"]"
+    },
+    {
+      "action": "collect-styles",
+      "target": "[data-testid=\"hero-cta\"]",
+      "computed": {
+        "color": "rgb(59, 130, 246)",
+        "transitionTimingFunction": "linear"
+      }
+    }
+  ],
+  "notes": [
+    "Mock run generated locally; switch to --mode live once the orchestrator is ready.",
+    "Instruction captured: Audit https://example.com for hover and contrast issues.",
+    "Next prompt: Apply the brand.primary hover animation and rerun."
+  ]
+}
