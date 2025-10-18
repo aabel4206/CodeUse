@@ -1,0 +1,57 @@
+{
+  "run_id": "mock-20251018-194914",
+  "created_at": "2025-10-18T19:49:14.517074+00:00",
+  "request": {
+    "id": "9f4afa82-7897-4c5a-80cf-2f73726309aa",
+    "tool": "codeuse-cli",
+    "arguments": [
+      "run",
+      "--instruction=\"Fix the hover animation to use brand.primary.\"",
+      "--mode=mock"
+    ],
+    "cwd": "C:\\Users\\aabel\\Downloads\\CodeUse",
+    "timeout_ms": 600000
+  },
+  "result": {
+    "status": "completed",
+    "exit_code": 0,
+    "duration_ms": 4875,
+    "started_at": "2025-10-18T19:49:14.517074+00:00",
+    "finished_at": "2025-10-18T19:49:19.392074+00:00",
+    "highlights": [
+      "Executor replayed hover interaction on Chromium demo page.",
+      "Observation log includes computed-style diff for brand color."
+    ],
+    "observations": [
+      {
+        "selector": "[data-testid=\"hero-cta\"]",
+        "severity": "warning",
+        "message": "Hover animation stays linear; expected spring transition with brand.primary color."
+      },
+      {
+        "selector": "[data-testid=\"stats-card\"]",
+        "severity": "info",
+        "message": "Card renders but text contrast is 3.9:1; flagging for design follow-up."
+      }
+    ],
+    "errors": []
+  },
+  "artifacts": [
+    {
+      "type": "screenshot",
+      "path": "runs/mock-20251018-194914/artifacts/hover.png"
+    },
+    {
+      "type": "json",
+      "path": "runs/mock-20251018-194914/artifacts/action_log.json"
+    },
+    {
+      "type": "markdown",
+      "path": "runs/mock-20251018-194914/summary.md"
+    }
+  ],
+  "notes": [
+    "Mock run generated locally; switch to --mode live once the orchestrator is ready.",
+    "Instruction captured: Fix the hover animation to use brand.primary."
+  ]
+}

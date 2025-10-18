@@ -1,0 +1,85 @@
+{
+  "run_id": "mock-20251018-210902",
+  "created_at": "2025-10-18T21:09:02.094946+00:00",
+  "instruction": "Audit https://ntedvs.com/ for UI issues.",
+  "description": "Baseline audit of ntedvs.com capturing layout, accessibility, and contrast problems.",
+  "next_prompt": "Fix the highlighted issues on ntedvs.com and re-run the audit to verify the fixes.",
+  "request": {
+    "id": "9f796563-7a52-46d4-a62e-7cbd73fd105f",
+    "tool": "codeuse-cli",
+    "arguments": [
+      "run",
+      "--instruction=\"Audit https://ntedvs.com/ for UI issues.\"",
+      "--mode=mock"
+    ],
+    "cwd": "C:\\Users\\aabel\\Downloads\\CodeUse",
+    "timeout_ms": 600000
+  },
+  "result": {
+    "status": "completed",
+    "exit_code": 0,
+    "duration_ms": 4875,
+    "started_at": "2025-10-18T21:09:02.094946+00:00",
+    "finished_at": "2025-10-18T21:09:06.969946+00:00",
+    "highlights": [
+      "Executor replayed hover interaction on Chromium demo page.",
+      "Link contrast analysis captured footer accessibility issues."
+    ],
+    "observations": [
+      {
+        "selector": ".hero__cta",
+        "severity": "error",
+        "message": "Primary call-to-action collides with hero copy on desktop.",
+        "description": "At 1440px width the CTA button overlaps the heading, obscuring the main marketing message.",
+        "screenshot": "runs/mock-20251018-210902/artifacts/issue-hero-overlap.png",
+        "suggested_prompt": "Adjust the hero layout so the CTA sits below the heading with responsive spacing."
+      },
+      {
+        "selector": "footer a[href*=\"contact\"]",
+        "severity": "warning",
+        "message": "Footer contact link color fails contrast requirements against background.",
+        "description": "The contact link uses #5D9CEC on a light gradient, yielding a 2.1:1 contrast ratio.",
+        "screenshot": "runs/mock-20251018-210902/artifacts/issue-footer-contrast.png",
+        "suggested_prompt": "Apply a darker footer link color or background to meet at least 4.5:1 contrast."
+      },
+      {
+        "selector": ".nav__menu-toggle",
+        "severity": "info",
+        "message": "Mobile nav toggle lacks accessible name.",
+        "description": "Screen readers announce the toggle as 'button' with no label; aria-label should describe the action.",
+        "screenshot": "runs/mock-20251018-210902/artifacts/issue-nav-toggle.png",
+        "suggested_prompt": "Add aria-label=\"Open navigation\" to the mobile menu toggle button."
+      }
+    ],
+    "errors": [],
+    "description": "Baseline pass over ntedvs.com highlighting layout overlap, color contrast, and accessibility gaps.",
+    "next_prompt": "Re-run the site after applying layout, contrast, and aria-label fixes."
+  },
+  "artifacts": [
+    {
+      "type": "screenshot",
+      "path": "runs/mock-20251018-210902/artifacts/issue-hero-overlap.png"
+    },
+    {
+      "type": "screenshot",
+      "path": "runs/mock-20251018-210902/artifacts/issue-footer-contrast.png"
+    },
+    {
+      "type": "screenshot",
+      "path": "runs/mock-20251018-210902/artifacts/issue-nav-toggle.png"
+    },
+    {
+      "type": "json",
+      "path": "runs/mock-20251018-210902/artifacts/action_log.json"
+    },
+    {
+      "type": "markdown",
+      "path": "runs/mock-20251018-210902/summary.md"
+    }
+  ],
+  "notes": [
+    "Mock run generated locally; replace artifacts with real ntedvs.com captures for live demos.",
+    "Instruction captured: Audit https://ntedvs.com/ for UI issues.",
+    "Next prompt: Implement the recommended fixes and capture a follow-up run."
+  ]
+}
