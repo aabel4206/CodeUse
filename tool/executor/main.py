@@ -35,7 +35,7 @@ class ExecRequest(BaseModel):
 @app.post("/execute")
 async def execute(req: ExecRequest):
     run_id = utils.new_run_id()
-    utils.append_log(run_id, "request", req.model_dump())
+    utils.append_log(run_id, "request", req.model_dump(mode="json"))
 
     browser = None
     page = None
@@ -49,6 +49,7 @@ async def execute(req: ExecRequest):
             page.set_default_timeout(5000)  # 5s per Playwright op
 
             await page.goto(str(req.url), timeout=10_000)
+            before_path = await actions.screenshot(page, run_id, f"step-{req.step}-before")
 
             for call in req.actions:
                 action_fn = getattr(actions, call.fn, None)
@@ -74,12 +75,16 @@ async def execute(req: ExecRequest):
                     "after": await actions.get_computed_style(page, req.selector, ":hover"),
                 }
 
-            screenshot_path = await actions.screenshot(page, run_id, f"step-{req.step}")
+            after_path = await actions.screenshot(page, run_id, f"step-{req.step}-after")
 
             observation = {
                 "selector": req.selector,
                 "metrics": metrics,
-                "screenshot": screenshot_path,
+                "screenshots": {
+                    "before": before_path,
+                    "after": after_path,
+                },
+                "screenshot": after_path,
                 "url": await actions.current_url(page),
                 "errors": errors,
             }

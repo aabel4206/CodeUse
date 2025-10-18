@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from playwright.async_api import Page
 
@@ -25,16 +25,25 @@ async def hover(page: Page, selector: str) -> Dict[str, Any]:
     return {"ok": True}
 
 
+async def click(page: Page, selector: str) -> Dict[str, Any]:
+    """Click the element matching ``selector``."""
+    await page.wait_for_selector(selector, state="visible")
+    await page.click(selector)
+    await page.wait_for_timeout(100)  # brief pause for DOM updates
+    return {"ok": True}
+
+
 async def get_computed_style(page: Page, selector: str, pseudo: str = "") -> Dict[str, Any]:
     """Return selected computed style values for an element (optionally in a pseudo state)."""
 
     js = """
-        (sel, pseudo) => {
+        ({ sel, pseudo }) => {
             const el = document.querySelector(sel);
             if (!el) {
                 throw new Error(`Element not found for selector: ${sel}`);
             }
-            const computed = getComputedStyle(el, pseudo && pseudo.length ? pseudo : null);
+            const targetPseudo = pseudo && pseudo.length ? pseudo : null;
+            const computed = getComputedStyle(el, targetPseudo);
             return {
                 transform: computed.transform,
                 transitionDuration: computed.transitionDuration,
@@ -43,11 +52,11 @@ async def get_computed_style(page: Page, selector: str, pseudo: str = "") -> Dic
         }
     """
 
-    return await page.evaluate(js, selector, pseudo)
+    return await page.evaluate(js, {"sel": selector, "pseudo": pseudo})
 
 
-def _parse_duration_to_ms(duration: str) -> float:
-    """Convert CSS duration strings (e.g., '0.2s', '150ms') to milliseconds."""
+def _parse_duration_to_ms(duration: str) -> Optional[float]:
+    """Convert CSS duration strings (e.g., '0.2s', '150ms') to milliseconds; return None on failure."""
     try:
         value = duration.strip().lower()
         if value.endswith("ms"):
@@ -55,8 +64,8 @@ def _parse_duration_to_ms(duration: str) -> float:
         if value.endswith("s"):
             return float(value[:-1]) * 1000.0
     except (ValueError, AttributeError):
-        return float("nan")
-    return float("nan")
+        return None
+    return None
 
 
 async def measure_hover_metrics(page: Page, selector: str) -> Dict[str, Any]:
@@ -82,7 +91,7 @@ async def measure_hover_metrics(page: Page, selector: str) -> Dict[str, Any]:
 async def get_bounding_client_rect(page: Page, selector: str) -> Dict[str, Any]:
     """Return the bounding client rect for the first element that matches ``selector``."""
     js = """
-        (sel) => {
+        ({ sel }) => {
             const el = document.querySelector(sel);
             if (!el) {
                 throw new Error(`Element not found for selector: ${sel}`);
@@ -96,7 +105,7 @@ async def get_bounding_client_rect(page: Page, selector: str) -> Dict[str, Any]:
             };
         }
     """
-    return await page.evaluate(js, selector)
+    return await page.evaluate(js, {"sel": selector})
 
 
 async def get_text(page: Page, selector: str) -> str:
