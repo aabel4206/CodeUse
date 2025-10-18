@@ -1,0 +1,28 @@
+%% Mermaid diagram describing the CodeUse demo architecture.
+flowchart LR
+    subgraph Orchestration
+        O1[Check & Prompt Generator]
+        O2[IDE Agent]
+        O1 -->|Fix Intent| O2
+    end
+
+    subgraph Execution
+        E1[tool.py CLI]
+        E2[Executor Sandbox]
+        E3[runs/ JSON Artifacts]
+        E1 -->|Launch job| E2
+        E2 -->|Persist result| E3
+    end
+
+    subgraph Reporting
+        R1[reporter.load_runs]
+        R2[reporter.generate_report]
+        R3[Markdown Table]
+        R4[HTML Gallery]
+        R1 --> R2 --> R3
+        R2 --> R4
+    end
+
+    Orchestration -->|ExecutionRequest| Execution
+    Execution -->|RunSummary| Reporting
+    Reporting -->|Demo Output| Orchestration
