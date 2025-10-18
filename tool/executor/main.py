@@ -5,8 +5,12 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from playwright.async_api import async_playwright, Error as PlaywrightError
+from pydantic import BaseModel, Field, HttpUrl
+from playwright.async_api import (
+    Error as PlaywrightError,
+    TimeoutError as PlaywrightTimeout,
+    async_playwright,
+)
 
 from . import actions, utils
 
@@ -21,53 +25,79 @@ class ActionCall(BaseModel):
 
 
 class ExecRequest(BaseModel):
-    url: str
-    actions: List[ActionCall]
-    selector: str
-    step: int
+    url: HttpUrl
+    actions: List[ActionCall] = Field(default_factory=list)
+    selector: str = Field(..., min_length=1)
+    step: int = Field(1, ge=1)
+    measure_hover: bool = True
 
 
 @app.post("/execute")
 async def execute(req: ExecRequest):
     run_id = utils.new_run_id()
+    utils.append_log(run_id, "request", req.model_dump())
+
+    browser = None
+    page = None
+    results: List[Dict[str, Any]] = []
+    errors: List[str] = []
 
     try:
         async with async_playwright() as playwright:
             browser = await playwright.chromium.launch(headless=False)
             page = await browser.new_page()
-            await page.goto(req.url)
+            page.set_default_timeout(5000)  # 5s per Playwright op
 
-            results = []
-            for action_call in req.actions:
-                action_fn = getattr(actions, action_call.fn, None)
+            await page.goto(str(req.url), timeout=10_000)
+
+            for call in req.actions:
+                action_fn = getattr(actions, call.fn, None)
                 if action_fn is None:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Unknown action: {action_call.fn}",
-                    )
+                    msg = f"Unknown action: {call.fn}"
+                    results.append({"fn": call.fn, "ok": False, "error": msg})
+                    errors.append(msg)
+                    continue
 
-                response = await action_fn(page, **action_call.args)
-                results.append({"fn": action_call.fn, "result": response})
+                try:
+                    response = await action_fn(page, **call.args)
+                    results.append({"fn": call.fn, "ok": True, "res": response})
+                except (PlaywrightTimeout, PlaywrightError, Exception) as exc:
+                    msg = f"Action {call.fn} failed: {exc}"
+                    results.append({"fn": call.fn, "ok": False, "error": str(exc)})
+                    errors.append(msg)
 
-            metrics = await actions.get_computed_style(page, req.selector)
-            screenshot_path = await actions.screenshot(
-                page, f"{run_id}-step{req.step}"
-            )
+            if req.measure_hover:
+                metrics = await actions.measure_hover_metrics(page, req.selector)
+            else:
+                metrics = {
+                    "before": await actions.get_computed_style(page, req.selector, ""),
+                    "after": await actions.get_computed_style(page, req.selector, ":hover"),
+                }
 
-            await browser.close()
+            screenshot_path = await actions.screenshot(page, run_id, f"step-{req.step}")
+
+            observation = {
+                "selector": req.selector,
+                "metrics": metrics,
+                "screenshot": screenshot_path,
+                "url": await actions.current_url(page),
+                "errors": errors,
+            }
+
+            utils.append_log(run_id, "observation", observation)
+
+            return {"run_id": run_id, "results": results, "observation": observation}
+
     except PlaywrightError as err:
-        raise HTTPException(
-            status_code=500, detail=f"Playwright error: {err}"
-        ) from err
-
-    observation = {
-        "metrics": metrics,
-        "screenshot": screenshot_path,
-        "errors": [],
-    }
-
-    return {
-        "run_id": run_id,
-        "results": results,
-        "observation": observation,
-    }
+        raise HTTPException(status_code=500, detail=f"Playwright error: {err}") from err
+    finally:
+        if page is not None:
+            try:
+                await page.close()
+            except Exception:
+                pass
+        if browser is not None:
+            try:
+                await browser.close()
+            except Exception:
+                pass

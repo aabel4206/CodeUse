@@ -3,10 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <title>Executor Test Page</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .btn {
+            background: #0b63ff;
+            border: none;
+            color: #ffffff;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: transform 0.07s linear; /* intentionally too fast */
+            box-shadow: 0 10px 20px rgba(11, 99, 255, 0.2);
+        }
+
+        .btn:hover {
+            transform: scale(1.02);
+        }
+    </style>
 </head>
 <body>
     <h1>Executor Test Page</h1>
-    <p>This lightweight page exists so the executor can click the wrong button.</p>
-    <button id="wrong-button">Wrong Button</button>
+    <p>Hover over the primary action to reproduce the animation defect.</p>
+    <button data-testid="primary-btn" class="btn">Hover me</button>
 </body>
 </html>
