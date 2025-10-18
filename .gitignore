@@ -85,6 +85,4 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-runs/*.json
-runs/*.md
-!runs/.gitkeep
+runs/

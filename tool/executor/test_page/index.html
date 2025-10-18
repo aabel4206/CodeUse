@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Multi-Action Demo</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    #color-box {
+      width: 100px;
+      height: 100px;
+      background: lightgray;
+      margin-top: 20px;
+      transition: background-color 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <h1>Playwright Multi-Action Test Page</h1>
+
+  <button id="btn1">Say Hello</button>
+  <button id="btn2">Change Color</button>
+  <button id="btn3">Toggle Visibility</button>
+
+  <p id="output"></p>
+  <div id="color-box"></div>
+
+  <script>
+    const out = document.getElementById("output");
+    const box = document.getElementById("color-box");
+    const colors = ["red", "green", "blue", "orange"];
+    let visible = true;
+    let colorIndex = 0;
+
+    document.getElementById("btn1").addEventListener("click", () => {
+      out.textContent = "Hello Playwright!";
+    });
+
+    document.getElementById("btn2").addEventListener("click", () => {
+      colorIndex = (colorIndex + 1) % colors.length;
+      box.style.backgroundColor = colors[colorIndex];
+    });
+
+    document.getElementById("btn3").addEventListener("click", () => {
+      visible = !visible;
+      box.style.display = visible ? "block" : "none";
+    });
+  </script>
+</body>
+</html>
