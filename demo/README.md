@@ -109,6 +109,12 @@ python demo\cli.py --url http://localhost:5173 --prompt-file demo\prompts\full_p
 * `--prompt-file` → Gemini-style JSON of actions
 * `--slow-ms` → delay (ms) between Playwright steps for narration
 
+### Follow-one-link demo
+
+- The index page is in-spec and links to `page2.html`.
+- By default the CLI follows the first same-origin link and audits the child page, surfacing hover spec failures, missing alt text, tiny click targets, overlays, and broken links.
+- Disable link following with `--no-follow` if you only want to stay on the landing page.
+
 ---
 
 ## 5️⃣ Outputs
