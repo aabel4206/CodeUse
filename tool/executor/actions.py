@@ -33,19 +33,21 @@ async def _ensure_visible(page: Page, selector: str, timeout_ms: int = 5000) -> 
         ) from exc
 
 
-async def hover(page: Page, selector: str) -> Dict[str, Any]:
-    """Hover over the element matching ``selector``."""
+async def hover(page: Page, selector: str, *, slow_ms: int = 0) -> Dict[str, Any]:
+    """Hover over the element matching ``selector`` with optional slow motion."""
     await page.wait_for_selector(selector, state="visible")
     await page.hover(selector)
-    await page.wait_for_timeout(200)  # allow animations to complete
+    wait_ms = 200 + max(slow_ms, 0)
+    await page.wait_for_timeout(wait_ms)
     return {"ok": True}
 
 
-async def click(page: Page, selector: str) -> Dict[str, Any]:
-    """Click the element matching ``selector``."""
+async def click(page: Page, selector: str, *, slow_ms: int = 0) -> Dict[str, Any]:
+    """Click the element matching ``selector`` with optional slow motion."""
     await page.wait_for_selector(selector, state="visible")
     await page.click(selector)
-    await page.wait_for_timeout(100)  # brief pause for DOM updates
+    wait_ms = 100 + max(slow_ms, 0)
+    await page.wait_for_timeout(wait_ms)
     return {"ok": True}
 
 
@@ -84,10 +86,10 @@ def _parse_duration_to_ms(duration: str) -> Optional[float]:
     return None
 
 
-async def measure_hover_metrics(page: Page, selector: str) -> Dict[str, Any]:
+async def measure_hover_metrics(page: Page, selector: str, *, slow_ms: int = 0) -> Dict[str, Any]:
     """Capture before/after computed styles for hover transitions."""
     before = await get_computed_style(page, selector, "")
-    await hover(page, selector)
+    await hover(page, selector, slow_ms=slow_ms)
     after = await get_computed_style(page, selector, ":hover")
 
     return {

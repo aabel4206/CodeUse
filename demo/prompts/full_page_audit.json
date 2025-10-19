@@ -1,0 +1,13 @@
+{
+  "title": "Full Page Quick Audit",
+  "task": "Check hover spec, broken links, missing alt text, small click targets, and overlaps. Provide counts and one example for each issue type.",
+  "steps": [
+    {"action": "go_to", "url": "<URL>"},
+    {"action": "hover", "selector": "#btn1"},
+    {"action": "scan_links"},
+    {"action": "scan_images"},
+    {"action": "measure_target", "selector": ".tiny-btn"},
+    {"action": "detect_overlap", "selector": "#btn1"}
+  ],
+  "expected_report_keys": ["hover_animation", "broken_links", "missing_alt", "small_click_target", "overlap"]
+}

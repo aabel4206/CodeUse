@@ -1,0 +1,25 @@
+{
+  "hover_audit_expected": {
+    "scale_after": 1.02,
+    "duration_ms": 75,
+    "timing_function": "linear",
+    "screenshot_path": "runs/<run_id>/step-1-after.png"
+  },
+  "full_page_audit_expected": {
+    "hover_animation": {
+      "scale_after": 1.02,
+      "duration_ms": 75,
+      "timing_function": "linear"
+    },
+    "broken_links": [
+      {"url": "/dead-link-404", "status": 404}
+    ],
+    "missing_alt": 1,
+    "small_click_target": [
+      {"selector": ".tiny-btn", "size": [24, 24]}
+    ],
+    "overlap": [
+      {"selector": "#btn1", "overlaps": 1}
+    ]
+  }
+}
