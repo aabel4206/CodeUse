@@ -69,6 +69,32 @@ class CodeExecutor:
 # ---------------------------------------------------------------------------
 
 
+def _safe_console_message(msg):
+    """Normalize Playwright ConsoleMessage for serialisation."""
+
+    def get(attr):
+        value = getattr(msg, attr, None)
+        try:
+            return value() if callable(value) else value
+        except Exception:
+            return None
+
+    out = {
+        "type": get("type"),
+        "text": get("text"),
+    }
+    loc = get("location")
+    if isinstance(loc, dict):
+        out["location"] = loc
+    args = get("args")
+    if isinstance(args, list):
+        try:
+            out["args"] = [str(a) for a in args]
+        except Exception:
+            pass
+    return out
+
+
 async def _collect_links(page) -> List[Dict[str, Any]]:
     links = await page.evaluate(
         """
@@ -163,34 +189,38 @@ async def _run_audit_async(
     slow_ms: int = 0,
     selector: str = "#btn1",
 ) -> Dict[str, Any]:
+    slow_ms = int(slow_ms or 0)
+
     run_id = run_id or utils.new_run_id()
     console_lines: List[Dict[str, Any]] = []
     results: List[Dict[str, Any]] = []
     errors: List[str] = []
 
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(headless=False, slow_mo=max(slow_ms, 0))
+        browser = await playwright.chromium.launch(
+            headless=True,
+            slow_mo=slow_ms if slow_ms > 0 else 0,
+        )
         context = await browser.new_context()
         page = await context.new_page()
 
-        page.on(
-            "console",
-            lambda msg: console_lines.append({
-                "type": msg.type,
-                "text": msg.text(),
-            }),
-        )
+        page.on("console", lambda msg: console_lines.append(_safe_console_message(msg)))
+
+        async def _maybe_pause():
+            if slow_ms > 0:
+                try:
+                    await page.wait_for_timeout(slow_ms)
+                except Exception:
+                    pass
 
         try:
             await page.goto(target_url, timeout=15_000)
             results.append({"fn": "goto", "ok": True, "res": {"url": page.url}})
-            if slow_ms:
-                await page.wait_for_timeout(slow_ms)
+            await _maybe_pause()
 
             before_path = await actions.screenshot(page, run_id, "step-1-before")
             results.append({"fn": "screenshot", "ok": True, "res": {"path": before_path, "label": "before"}})
-            if slow_ms:
-                await page.wait_for_timeout(slow_ms)
+            await _maybe_pause()
 
             metrics = await actions.measure_hover_metrics(page, selector, slow_ms=slow_ms)
             bbox = await actions.get_bounding_client_rect(page, selector)
@@ -202,8 +232,7 @@ async def _run_audit_async(
                 "url": page.url,
             })
             results.append({"fn": "measure_hover_metrics", "ok": True, "res": metrics})
-            if slow_ms:
-                await page.wait_for_timeout(slow_ms)
+            await _maybe_pause()
 
             after_path = await actions.screenshot(page, run_id, "step-1-after")
             results.append({"fn": "screenshot", "ok": True, "res": {"path": after_path, "label": "after"}})
