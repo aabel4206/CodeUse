@@ -128,6 +128,7 @@ class AuditResult(BaseModel):
     target_url: str
     primary_cta: Optional[PrimaryCTA] = None
     issues: List[Issue] = Field(default_factory=list)
+    summary: str = ""
     artifacts: Dict[str, Any]
 
 

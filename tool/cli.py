@@ -90,11 +90,6 @@ def main(argv: List[str] | None = None) -> int:
         help="Target CSS selector (default: %(default)s)",
     )
     parser.add_argument(
-        "--executor-url",
-        default="http://127.0.0.1:8000",
-        help="Base URL of the executor service (default: %(default)s)",
-    )
-    parser.add_argument(
         "--mode",
         choices=["auto", "hover", "click", "screenshot"],
         default="auto",
@@ -122,7 +117,7 @@ def main(argv: List[str] | None = None) -> int:
     }
 
     try:
-        result = asyncio.run(run_task(spec, gemini_client, args.executor_url))
+        result = asyncio.run(run_task(spec, gemini_client))
     except Exception as exc:  # pragma: no cover - surfaced to the user
         print(f"Failed to run task: {exc}", file=sys.stderr)
         return 1

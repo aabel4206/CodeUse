@@ -15,7 +15,7 @@ async def test_hover_and_styles(test_page_url: str):
         page = await browser.new_page()
         await page.goto(test_page_url)
 
-        selector = "#btn1"
+        selector = "[data-testid='btn-campaign']"
         result = await actions.hover(page, selector)
         assert result["ok"] is True
 
@@ -37,7 +37,7 @@ async def test_measure_hover_metrics(test_page_url: str):
         page = await browser.new_page()
         await page.goto(test_page_url)
 
-        selector = "#btn1"
+        selector = "[data-testid='btn-campaign']"
         metrics = await actions.measure_hover_metrics(page, selector)
         assert "before" in metrics and "after" in metrics
         assert "transitionDuration_ms" in metrics["before"]
@@ -53,12 +53,12 @@ async def test_dom_helpers_and_url(test_page_url: str):
         page = await browser.new_page()
         await page.goto(test_page_url)
 
-        selector = "#btn1"
+        selector = "[data-testid='btn-campaign']"
         bbox = await actions.get_bounding_client_rect(page, selector)
         assert {"x", "y", "width", "height"} <= set(bbox)
 
         text = await actions.get_text(page, selector)
-        assert "Say Hello" in text
+        assert "Load Metrics" in text
 
         current = await actions.current_url(page)
         assert current.startswith("http://127.0.0.1")

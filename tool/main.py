@@ -1,10 +1,8 @@
 # tool/main.py
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from uuid import uuid4
+from pydantic import BaseModel, Field, HttpUrl
 from pathlib import Path
 import json
-import asyncio
 import os
 
 # Load environment variables from .env file
@@ -18,6 +16,9 @@ from orchestrator.loop import run_task
 from llm_parse.parser import OpenRouterParser
 from google import genai  # Gemini SDK
 
+from tool.cli import CLIGeminiClient, _functions_for_mode, _infer_mode
+from tool.orchestrator.loop import run_task
+
 app = FastAPI(title="ProbeTool API")
 
 # ---------- MODEL / CLIENT INITIALIZATION ----------
@@ -26,6 +27,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 gemini_client = genai.Client(model="gemini-2.5-pro-exp")
 
 # OpenRouter client (single global)
+# OpenRouter client (single global) – currently unused but kept for future wiring.
 from openai import OpenAI
 openrouter_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -45,11 +47,13 @@ class TaskRequest(BaseModel):
 class RunStatus(BaseModel):
     run_id: str
     status: str
-    step: int = 0
-    message: str = "starting..."
-    errors: list = []
+    step: int | None = None
+    success: bool | None = None
+    message: str | None = None
+    errors: list | None = None
 
-class RunResult(BaseModel):
+
+class RunStartResponse(BaseModel):
     run_id: str
     success: bool
     observations: list
@@ -98,41 +102,50 @@ async def fake_suggestion_llm(observations: list):
 # -------------------------------
 # ROUTES
 # -------------------------------
-@app.post("/runs")
+@app.post("/runs", response_model=RunStartResponse)
 async def start_run(request: TaskRequest):
-    run_id = str(uuid4())
-    run_dir = RUNS_DIR / run_id
-    run_dir.mkdir(exist_ok=True)
+    if request.task_spec:
+        spec = dict(request.task_spec)
+    else:
+        spec = {
+            "target_url": str(request.target_url),
+            "target_selector": request.target_selector,
+            "instruction": request.instruction,
+        }
 
-    status = RunStatus(run_id=run_id, status="started")
-    (run_dir / "status.json").write_text(status.model_dump_json())
+    if gemini_client is not None:
+        client = gemini_client
+    else:
+        mode = request.mode.lower()
+        if mode == "auto":
+            mode = _infer_mode(request.instruction)
+        function_names = _functions_for_mode(mode)
+        client = CLIGeminiClient(function_names)
 
-    # --- Pipeline execution ---
-    spec = await fake_openrouter_parse(request.instruction)
-    observations = await fake_gemini_probe(run_id, spec)
-    suggestions = await fake_suggestion_llm(observations)
-
-    result = RunResult(
-        run_id=run_id,
-        success=True,
-        observations=observations,
-        suggestions=suggestions,
-        screenshots=[obs["screenshot"] for obs in observations]
+    result = await run_task(spec, client)
+    status = "completed" if result.get("success") else "failed"
+    return RunStartResponse(
+        run_id=result.get("run_id"),
+        status=status,
+        audit=result.get("audit"),
+        errors=result.get("errors", []),
     )
 
-    (run_dir / "result.json").write_text(result.model_dump_json())
-    status.status = "completed"
-    (run_dir / "status.json").write_text(status.model_dump_json())
 
-    return {"run_id": run_id, "status": "completed"}
-
-
-@app.get("/runs/{run_id}/status")
+@app.get("/runs/{run_id}/status", response_model=RunStatus)
 async def get_status(run_id: str):
     path = RUNS_DIR / run_id / "status.json"
     if not path.exists():
         raise HTTPException(status_code=404, detail="Run not found")
-    return json.loads(path.read_text())
+    data = json.loads(path.read_text())
+    return RunStatus(
+        run_id=run_id,
+        status=data.get("state", data.get("status", "unknown")),
+        step=data.get("step"),
+        success=data.get("success"),
+        message=data.get("message"),
+        errors=data.get("errors"),
+    )
 
 
 @app.get("/runs/{run_id}/result")

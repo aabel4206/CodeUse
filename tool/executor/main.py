@@ -1,10 +1,9 @@
-"""FastAPI server exposing the executor actions."""
+"""Executor runner that performs Playwright actions and returns observations."""
 
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, HttpUrl
 from playwright.async_api import (
     Error as PlaywrightError,
@@ -13,8 +12,6 @@ from playwright.async_api import (
 )
 
 from . import actions, utils
-
-app = FastAPI(title="Executor Service", version="0.1.0")
 
 
 class ActionCall(BaseModel):
@@ -32,20 +29,35 @@ class ExecRequest(BaseModel):
     measure_hover: bool = True
 
 
-@app.post("/execute")
-async def execute(req: ExecRequest):
+async def execute_request(req: ExecRequest) -> Dict[str, Any]:
     run_id = utils.new_run_id()
     utils.append_log(run_id, "request", req.model_dump(mode="json"))
 
     browser = None
+    context = None
     page = None
     results: List[Dict[str, Any]] = []
     errors: List[str] = []
 
     try:
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=False, slow_mo=500)
-            page = await browser.new_page()
+            launch_kwargs: Dict[str, Any] = {
+                "headless": False,
+                "slow_mo": 2500,
+                "args": [
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-infobars",
+                    "--start-maximized",
+                ],
+            }
+            browser = await playwright.chromium.launch(**launch_kwargs)
+            context = await browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36",
+            )
+            page = await context.new_page()
             page.set_default_timeout(5000)  # 5s per Playwright op
 
             await page.goto(str(req.url), timeout=10_000)
@@ -106,11 +118,16 @@ async def execute(req: ExecRequest):
             return {"run_id": run_id, "results": results, "observation": observation}
 
     except PlaywrightError as err:
-        raise HTTPException(status_code=500, detail=f"Playwright error: {err}") from err
+        raise RuntimeError(f"Playwright error: {err}") from err
     finally:
         if page is not None:
             try:
                 await page.close()
+            except Exception:
+                pass
+        if context is not None:
+            try:
+                await context.close()
             except Exception:
                 pass
         if browser is not None:

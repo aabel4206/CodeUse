@@ -1,9 +1,8 @@
-import json
 from pathlib import Path
 
-import httpx
 import pytest
 
+from tool.executor.main import ExecRequest, execute_request
 from tool.orchestrator.loop import run_task
 
 
@@ -29,20 +28,18 @@ class DummyGeminiClient:
 
 
 @pytest.mark.asyncio
-async def test_executor_endpoint_contract(executor_server_url: str, test_page_url: str):
+async def test_executor_direct_call(test_page_url: str):
     payload = {
         "url": test_page_url,
-        "actions": [{"fn": "hover", "args": {"selector": "#btn1"}}],
-        "selector": "#btn1",
+        "actions": [{"fn": "hover", "args": {"selector": "[data-testid='btn-campaign']"}}],
+        "selector": "[data-testid='btn-campaign']",
         "step": 1,
         "measure_hover": True,
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(f"{executor_server_url}/execute", json=payload)
+    request = ExecRequest.model_validate(payload)
+    data = await execute_request(request)
 
-    assert resp.status_code == 200
-    data = resp.json()
     assert "run_id" in data
     assert data["results"][0]["ok"] is True
 
@@ -53,14 +50,14 @@ async def test_executor_endpoint_contract(executor_server_url: str, test_page_ur
 
 
 @pytest.mark.asyncio
-async def test_run_task_success(executor_server_url: str, test_page_url: str):
+async def test_run_task_success(test_page_url: str):
     spec = {
         "target_url": test_page_url,
-        "target_selector": "#btn1",
+        "target_selector": "[data-testid='btn-campaign']",
         "instruction": "Check if the first button responds to hover",
     }
 
-    result = await run_task(spec, DummyGeminiClient(), executor_server_url)
+    result = await run_task(spec, DummyGeminiClient())
     assert result["success"] is True
     run_id = result["run_id"]
 

@@ -373,13 +373,34 @@ def build_audit_result(
     has_high = any(i.severity == "high" for i in issues)
     success = not has_high
 
+    summary_parts: List[str] = []
+    if issues:
+        summary_parts.append(f"Detected {len(issues)} issue(s).")
+        for issue in issues:
+            summary_parts.append(f"{issue.id}: {issue.summary}")
+    else:
+        last_ok = _pick_last_ok_event(probe_events or [])
+        if last_ok:
+            metrics = (last_ok.metrics or {}).get("computed") or {}
+            after = metrics.get("after") or {}
+            transition = metrics.get("transition") or {}
+            transform = after.get("transform") or "none"
+            duration = transition.get("duration_ms")
+            timing = transition.get("timing_function")
+            summary_parts.append(
+                "No issues detected. Hover transform "
+                f"{transform} with duration {duration} ms and timing {timing}."
+            )
+        else:
+            summary_parts.append("No issues detected in available probe events.")
+
     audit = AuditResult(
         run_id=run_id,
         success=success,
         target_url=target_url,
         primary_cta=cta,
         issues=issues,
+        summary=" ".join(summary_parts),
         artifacts=artifacts or {},
     )
     return audit
-

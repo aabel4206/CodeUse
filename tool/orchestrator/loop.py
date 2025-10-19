@@ -1,6 +1,4 @@
 """Main orchestration loop for the CodeUse tool."""
-
-import asyncio
 import json
 import time
 import uuid
@@ -24,6 +22,7 @@ from .state import State, save_observation, save_result, update_status
 from tool.orchestrator.state import ProbeEvent
 
 # Normalization, aggregation, and persistence helpers
+from tool.executor.main import ExecRequest, execute_request
 from tool.orchestrator.adapter import normalize_with_openrouter
 from tool.reporter.aggregator import build_audit_result
 from tool.reporter.reporter import write_result_json
@@ -151,15 +150,18 @@ def _save_improved_prompt(original: str, improved: str):
 # -----------------------
 async def run_task(
     task_spec: Dict[str, Any],
-    gemini_client,                      # from main.py (google.genai.Client)
-    executor_base_url: str,             # e.g. "http://localhost:8001"
-    *, excluded_functions: Optional[List[str]] = None
+    gemini_client,  # from main.py (google.genai.Client)
+    *,
+    executor_runner: Optional[
+        Callable[[ExecRequest], "Awaitable[Dict[str, Any]]"]
+    ] = None,
+    excluded_functions: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Single-iteration run:
       1) Ask Gemini Computer Use for an action plan (browser env).
       2) Translate to a Playwright action list we support.
-      3) POST to executor /execute with ExecRequest.
+      3) Execute the action list via the local executor runner.
       4) Save observation + result and return RunResult JSON.
     """
     run_id = str(uuid.uuid4())
@@ -222,16 +224,13 @@ async def run_task(
     # -----------------------
     exec_result: Optional[Dict[str, Any]] = None
     errors: List[str] = []
-    for attempt in range(1, 3):  # attempt 1 and 2
-        try:
-            async with httpx.AsyncClient(timeout=60) as client:
-                resp = await client.post(f"{executor_base_url}/execute", json=exec_payload)
-                resp.raise_for_status()
-                exec_result = resp.json()
-                break
-        except Exception as e:
-            errors.append(f"executor_error.attempt_{attempt}: {e}")
-            await asyncio.sleep(0.35)
+
+    executor_callable = executor_runner or execute_request
+    try:
+        exec_request = ExecRequest.model_validate(exec_payload)
+        exec_result = await executor_callable(exec_request)
+    except Exception as e:
+        errors.append(f"executor_error: {e}")
 
     observation_payload: Dict[str, Any] = {}
     executor_results: List[Dict[str, Any]] = []
@@ -399,15 +398,16 @@ def _cu_to_playwright_actions(task_spec: Dict[str, Any], cu_raw: Any, run_id: st
     except Exception:
         pass
 
+    target_selector = task_spec.get("target_selector", "body")
     actions: List[Dict[str, Any]] = []
 
     # Map CU function calls to available playwright actions
     for fn in function_names:
         lower = fn.lower()
         if "hover" in lower:
-            actions.append({"fn": "hover", "args": {"selector": "body"}})
+            actions.append({"fn": "hover", "args": {"selector": target_selector}})
         elif "click" in lower:
-            actions.append({"fn": "click", "args": {"selector": "body"}})
+            actions.append({"fn": "click", "args": {"selector": target_selector}})
         elif "screenshot" in lower:
             actions.append({"fn": "screenshot", "args": {"run_id": run_id, "label": "error_check"}})
 
@@ -415,7 +415,7 @@ def _cu_to_playwright_actions(task_spec: Dict[str, Any], cu_raw: Any, run_id: st
     if not actions:
         actions = [
             {"fn": "screenshot", "args": {"run_id": run_id, "label": "error_check"}},
-            {"fn": "get_text", "args": {"selector": "body"}},
+            {"fn": "get_text", "args": {"selector": target_selector}},
             {"fn": "current_url", "args": {}},
         ]
 
@@ -426,9 +426,10 @@ def _cu_to_playwright_actions(task_spec: Dict[str, Any], cu_raw: Any, run_id: st
 
 def _default_error_check_actions(task_spec: Dict[str, Any], run_id: str) -> List[Dict[str, Any]]:
     """Default actions for error checking when no specific actions are found."""
+    selector = task_spec.get("target_selector", "body")
     return [
         {"fn": "screenshot", "args": {"run_id": run_id, "label": "error_check"}},
-        {"fn": "get_text", "args": {"selector": "body"}},
+        {"fn": "get_text", "args": {"selector": selector}},
         {"fn": "current_url", "args": {}},
     ]
 

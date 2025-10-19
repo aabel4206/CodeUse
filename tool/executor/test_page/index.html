@@ -2,57 +2,254 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Multi-Action Demo</title>
+  <title>Product Control Center</title>
   <style>
-    body { font-family: sans-serif; padding: 2rem; }
-    button {
-      background-color: #007bff;
+    :root {
+      color-scheme: light dark;
+      font-family: "Inter", system-ui, sans-serif;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #22c55e;
+      --neutral: #f8fafc;
+      --neutral-dark: #1f2937;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, var(--neutral) 0%, #ffffff 60%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem 4rem;
+      color: #111827;
+    }
+
+    header {
+      max-width: 960px;
+      width: 100%;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: -0.04em;
+    }
+
+    header p {
+      margin-top: 0.75rem;
+      color: #4b5563;
+      font-size: 1.05rem;
+    }
+
+    .dashboard {
+      max-width: 960px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 24px;
+      box-shadow:
+        0 20px 45px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      padding: 2.5rem;
+      backdrop-filter: blur(12px);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .action-card {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.02));
+      border-radius: 18px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1rem;
+      border: 1px solid rgba(37, 99, 235, 0.08);
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.15);
+      min-height: 180px;
+    }
+
+    .action-card h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .action-card p {
+      margin: 0;
+      color: #475569;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      flex-grow: 1;
+    }
+
+    .action-card button {
+      background: var(--primary);
       color: white;
       border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
+      border-radius: 9999px;
+      padding: 0.65rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 600;
       cursor: pointer;
-      margin-right: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
     }
-    #color-box {
-      width: 100px;
-      height: 100px;
-      background: lightgray;
-      margin-top: 20px;
-      transition: background-color 0.2s ease;
+
+    .action-card button:hover {
+      transform: translateY(-2px);
+      background: var(--primary-dark);
+      box-shadow: 0 12px 20px rgba(37, 99, 235, 0.25);
+    }
+
+    .action-card button.broken {
+      background: #e5e7eb;
+      color: #9ca3af;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .action-card button.broken:hover {
+      transform: none;
+      background: #e5e7eb;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+
+    #status-panel {
+      margin-top: 2.5rem;
+      background: rgba(15, 118, 110, 0.08);
+      border-radius: 16px;
+      padding: 1.5rem;
+      border: 1px solid rgba(15, 118, 110, 0.15);
+      color: #0f766e;
+      font-size: 0.95rem;
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    #status-panel strong {
+      font-weight: 700;
     }
   </style>
 </head>
 <body>
-  <h1>Playwright Multi-Action Test Page</h1>
+  <header>
+    <h1>Launch Console</h1>
+    <p>
+      Quick actions for marketing, product, and support teams. Five actions are wired to demo endpoints; one is intentionally broken for QA.
+    </p>
+  </header>
 
-  <button id="btn1">Say Hello</button>
-  <button id="btn2">Change Color</button>
-  <button id="btn3">Toggle Visibility</button>
+  <main class="dashboard">
+    <section class="button-grid">
+      <article class="action-card">
+        <h3>Campaign Stats</h3>
+        <p>Pulls the latest campaign performance metrics and injects them into the status panel.</p>
+        <button id="btn-campaign" data-testid="btn-campaign">Load Metrics</button>
+      </article>
 
-  <p id="output"></p>
-  <div id="color-box"></div>
+      <article class="action-card">
+        <h3>Sync CRM</h3>
+        <p>Simulates syncing CRM contacts and displays the count of new leads.</p>
+        <button id="btn-crm" data-testid="btn-crm">Sync CRM</button>
+      </article>
+
+      <article class="action-card">
+        <h3>Refresh Inventory</h3>
+        <p>Updates the storefront inventory with the latest stock levels.</p>
+        <button id="btn-inventory" data-testid="btn-inventory">Refresh Stock</button>
+      </article>
+
+      <article class="action-card">
+        <h3>Send Notification</h3>
+        <p>Triggers a toast indicating a faux notification was sent to subscribers.</p>
+        <button id="btn-notify" data-testid="btn-notify">Send Alert</button>
+      </article>
+
+      <article class="action-card">
+        <h3>Prepare Release</h3>
+        <p>Warms up the release checklist and confirms that QA has been notified.</p>
+        <button id="btn-release" data-testid="btn-release">Prep Release</button>
+      </article>
+
+      <article class="action-card">
+        <h3>Book Demo</h3>
+        <p>This action intentionally lacks an event handler. It should highlight missing wiring.</p>
+        <button id="btn-demo" data-testid="btn-demo" class="broken">Book Demo</button>
+      </article>
+    </section>
+
+    <section id="status-panel" aria-live="polite">
+      <div><strong>Status:</strong> Waiting for interaction…</div>
+      <div id="status-detail">—</div>
+    </section>
+  </main>
+
+  <footer>
+    © 2025 Imaginary Labs • Build meaningful experiences, measure everything.
+  </footer>
 
   <script>
-    const out = document.getElementById("output");
-    const box = document.getElementById("color-box");
-    const colors = ["red", "green", "blue", "orange"];
-    let visible = true;
-    let colorIndex = 0;
+    const statusPanel = document.getElementById("status-panel");
+    const statusDetail = document.getElementById("status-detail");
+    const start = performance.now();
 
-    document.getElementById("btn1").addEventListener("click", () => {
-      out.textContent = "Hello Playwright!";
+    const updateStatus = (title, detail) => {
+      const since = Math.round(performance.now() - start);
+      statusPanel.children[0].innerHTML = `<strong>Status:</strong> ${title} <span style="opacity:0.6;">(${since} ms)</span>`;
+      statusDetail.textContent = detail;
+    };
+
+    document.getElementById("btn-campaign").addEventListener("click", () => {
+      const sessions = Math.floor(Math.random() * 1200 + 800);
+      const ctr = (Math.random() * 2 + 3).toFixed(2);
+      updateStatus("Campaign metrics refreshed", `Sessions: ${sessions.toLocaleString()} — CTR: ${ctr}%`);
     });
 
-    document.getElementById("btn2").addEventListener("click", () => {
-      colorIndex = (colorIndex + 1) % colors.length;
-      box.style.backgroundColor = colors[colorIndex];
+    document.getElementById("btn-crm").addEventListener("click", () => {
+      const leads = Math.floor(Math.random() * 25 + 10);
+      updateStatus("CRM synced", `${leads} new leads added to pipeline.`);
     });
 
-    document.getElementById("btn3").addEventListener("click", () => {
-      visible = !visible;
-      box.style.display = visible ? "block" : "none";
+    document.getElementById("btn-inventory").addEventListener("click", () => {
+      const variants = ["A7", "B3", "C9", "D12"];
+      const sku = variants[Math.floor(Math.random() * variants.length)];
+      updateStatus("Inventory refresh complete", `SKU ${sku} stock updated across regions.`);
     });
+
+    document.getElementById("btn-notify").addEventListener("click", () => {
+      updateStatus("Notification sent", "Subscribers queued for the feature rollout announcement.");
+      const toast = document.createElement("div");
+      toast.textContent = "Push notification dispatched!";
+      toast.style.position = "fixed";
+      toast.style.bottom = "24px";
+      toast.style.right = "24px";
+      toast.style.background = "#111827";
+      toast.style.color = "white";
+      toast.style.padding = "0.75rem 1.2rem";
+      toast.style.borderRadius = "12px";
+      toast.style.boxShadow = "0 10px 25px rgba(17, 24, 39, 0.25)";
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2200);
+    });
+
+    document.getElementById("btn-release").addEventListener("click", () => {
+      updateStatus("Release checklist ready", "QA pinged • Staging snapshot created • Docs updated.");
+    });
+
+    // Intentionally broken button: no event listener for #btn-demo
   </script>
 </body>
 </html>
