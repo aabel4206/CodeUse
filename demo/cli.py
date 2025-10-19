@@ -87,6 +87,17 @@ def main() -> int:
     print("CTA:          ", cta_selector)
     print("Success:      ", bridge_out.audit.success)
     print("Issue types:  ", issue_counts or {})
+    
+    # Display improvement prompts if available
+    if issues:
+        print("\n=== IMPROVEMENT PROMPTS ===")
+        for i, issue in enumerate(issues, 1):
+            print(f"\n{i}. {issue.type.replace('_', ' ').title()}")
+            print(f"   Issue: {issue.summary}")
+            if hasattr(issue, 'improvement_prompt') and issue.improvement_prompt:
+                print(f"   Prompt: {issue.improvement_prompt}")
+            else:
+                print("   Prompt: [No improvement prompt generated]")
 
     return 0
 

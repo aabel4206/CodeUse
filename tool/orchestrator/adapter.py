@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List
 
 import httpx
 
@@ -198,3 +198,116 @@ def normalize_with_openrouter(raw_executor_json: Dict[str, Any]) -> Tuple[Dict[s
         return primary, event
     except Exception:
         return _fallback_normalize(raw_executor_json)
+
+
+# -------------------------
+# Issue Enhancement with LLM
+# -------------------------
+
+ENHANCEMENT_SYSTEM_PROMPT = """You are a web development expert. For each issue found on a website, generate a simple, one-line improvement prompt.
+
+Keep prompts:
+- Short and actionable (1-2 sentences max)
+- Specific to the issue type
+- Easy to understand and implement
+
+Output ONLY JSON in this exact format:
+{
+  "improvements": [
+    {
+      "issue_id": "string",
+      "improvement_prompt": "string"
+    }
+  ]
+}"""
+
+
+def enhance_issues_with_llm(issues: List[Any], target_url: str) -> List[Any]:
+    """Use LLM to generate improvement prompts for each issue."""
+    if not issues:
+        return issues
+    
+    # Import here to avoid circular imports
+    from tool.orchestrator.state import Issue
+    
+    api_key = os.getenv("OPENROUTER_API_KEY", "")
+    if not api_key:
+        # If no API key, return issues without enhancement
+        return issues
+    
+    # Prepare issues data for LLM
+    issues_data = []
+    for issue in issues:
+        if isinstance(issue, Issue):
+            issues_data.append({
+                "id": issue.id,
+                "type": issue.type,
+                "severity": issue.severity,
+                "summary": issue.summary,
+                "suggested_fix": issue.suggested_fix,
+                "selector": issue.selector,
+                "evidence": issue.evidence
+            })
+        elif isinstance(issue, dict):
+            issues_data.append(issue)
+    
+    user_prompt = f"""Website URL: {target_url}
+
+Issues found:
+{json.dumps(issues_data, indent=2, ensure_ascii=False)}
+
+Generate improvement prompts for each issue that would help improve this website."""
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "http://localhost",
+        "X-Title": "codeuse-enhancer",
+    }
+    
+    payload = {
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": ENHANCEMENT_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 0.3,  # Slightly creative but consistent
+    }
+    
+    try:
+        with httpx.Client(timeout=60) as client:
+            response = client.post(OPENROUTER_URL, headers=headers, json=payload)
+            response.raise_for_status()
+            data = response.json()
+        
+        content = data["choices"][0]["message"]["content"]
+        enhancement_data = json.loads(_strip_json(content))
+        
+        # Create a mapping of issue_id to improvement_prompt
+        improvements_map = {}
+        for improvement in enhancement_data.get("improvements", []):
+            issue_id = improvement.get("issue_id")
+            improvement_prompt = improvement.get("improvement_prompt")
+            if issue_id and improvement_prompt:
+                improvements_map[issue_id] = improvement_prompt
+        
+        # Enhance the original issues with improvement prompts
+        enhanced_issues = []
+        for issue in issues:
+            if isinstance(issue, Issue):
+                # Create a new Issue with the improvement_prompt
+                issue_dict = issue.model_dump()
+                issue_dict["improvement_prompt"] = improvements_map.get(issue.id)
+                enhanced_issues.append(Issue(**issue_dict))
+            elif isinstance(issue, dict):
+                # Handle dict-based issues
+                issue["improvement_prompt"] = improvements_map.get(issue.get("id"))
+                enhanced_issues.append(issue)
+            else:
+                enhanced_issues.append(issue)
+        
+        return enhanced_issues
+        
+    except Exception as e:
+        print(f"Warning: Failed to enhance issues with LLM: {e}")
+        # Return original issues if enhancement fails
+        return issues
