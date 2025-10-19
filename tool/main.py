@@ -14,14 +14,14 @@ app = FastAPI(title="ProbeTool API")
 
 # ---------- MODEL / CLIENT INITIALIZATION ----------
 # Gemini Computer Use client (single global)
-genai.configure(api_key=os.getenv("AIzaSyCA1tqDcMZIKSFBouXgf3d1xb54VCc_1HA"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY", "AIzaSyCA1tqDcMZIKSFBouXgf3d1xb54VCc_1HA"))
 gemini_client = genai.Client(model="gemini-2.5-pro-exp")
 
 # OpenRouter client (single global)
 from openai import OpenAI
 openrouter_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("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")
+    api_key=os.getenv("OPENROUTER_API_KEY", "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")
 )
 
 RUNS_DIR = Path(__file__).parent / "runs"

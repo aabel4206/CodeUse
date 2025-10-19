@@ -24,7 +24,7 @@ from tool.orchestrator.loop import run_task
 DEFAULT_URL = "http://localhost:5173/index.html"
 DEFAULT_SELECTOR = "#btn1"
 DEFAULT_MODE = "auto"
-DEFAULT_EXECUTOR_URL = "http://127.0.0.1:8000"
+DEFAULT_EXECUTOR_URL = "http://127.0.0.1:8001"
 MODES: Tuple[str, ...] = ("auto", "hover", "click", "screenshot")
 PLAN_CHOICES: Tuple[str, ...] = ("none", "hover", "click", "screenshot")
 
@@ -245,13 +245,18 @@ def _run_once(
 
 
 def _interactive_audit() -> None:
-    url = _prompt_str("Target URL", DEFAULT_URL)
-    selector = _prompt_str("Target CSS selector", DEFAULT_SELECTOR)
-    instruction = _prompt_str("Instruction", required=True)
-    mode = _prompt_choice("Action mode", MODES, DEFAULT_MODE)
-    executor_url = _prompt_str("Executor URL", DEFAULT_EXECUTOR_URL)
-    plan_choice = _prompt_choice("Optional deterministic plan", PLAN_CHOICES, "none")
-    dry_run = _prompt_yes_no("Run in dry-run mode?", False)
+    # Simplified input - only ask for website and request
+    website = _prompt_str("Website URL", DEFAULT_URL)
+    request = _prompt_str("What would you like me to check?", required=True)
+    
+    # Use sensible defaults for all other parameters
+    url = website
+    selector = DEFAULT_SELECTOR
+    instruction = request
+    mode = DEFAULT_MODE
+    executor_url = DEFAULT_EXECUTOR_URL
+    plan_choice = "none"
+    dry_run = False
 
     _run_once(url, selector, instruction, mode, executor_url, plan_choice, dry_run=dry_run)
 
@@ -259,11 +264,9 @@ def _interactive_audit() -> None:
         answer = input("Re-run with changes? (y/N): ").strip().lower()
         if answer != "y":
             break
-        print(
-            f"(Keeping URL={url}, mode={mode}, executor={executor_url}, plan={plan_choice}, dry_run={dry_run})"
-        )
-        instruction = _prompt_str("Instruction", instruction, required=True)
-        selector = _prompt_str("Target CSS selector", selector)
+        print(f"(Keeping website={website})")
+        request = _prompt_str("What would you like me to check?", request, required=True)
+        instruction = request
         _run_once(url, selector, instruction, mode, executor_url, plan_choice, dry_run=dry_run)
 
 
