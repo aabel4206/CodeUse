@@ -6,6 +6,14 @@ from pathlib import Path
 import json
 import asyncio
 import os
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from orchestrator.loop import run_task
 from llm_parse.parser import OpenRouterParser
 from google import genai  # Gemini SDK
@@ -14,14 +22,14 @@ app = FastAPI(title="ProbeTool API")
 
 # ---------- MODEL / CLIENT INITIALIZATION ----------
 # Gemini Computer Use client (single global)
-genai.configure(api_key=os.getenv("AIzaSyCA1tqDcMZIKSFBouXgf3d1xb54VCc_1HA"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 gemini_client = genai.Client(model="gemini-2.5-pro-exp")
 
 # OpenRouter client (single global)
 from openai import OpenAI
 openrouter_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("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")
+    api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
 RUNS_DIR = Path(__file__).parent / "runs"
@@ -32,7 +40,7 @@ RUNS_DIR.mkdir(exist_ok=True)
 # -------------------------------
 class TaskRequest(BaseModel):
     instruction: str = "probe around the website to find errors or suggest improvements"
-    target_url: str = "http://localhost:5173"
+    target_url: str = os.getenv("DEFAULT_TARGET_URL", "http://localhost:5173")
 
 class RunStatus(BaseModel):
     run_id: str
@@ -56,7 +64,7 @@ async def fake_openrouter_parse(instruction: str):
     # Simulate parsing with OpenRouter
     await asyncio.sleep(0.5)
     return {
-        "target_url": "http://localhost:5173",
+        "target_url": os.getenv("DEFAULT_TARGET_URL", "http://localhost:5173"),
         "goals": ["discover UI issues", "find broken links", "check layout consistency"],
         "max_steps": 3
     }

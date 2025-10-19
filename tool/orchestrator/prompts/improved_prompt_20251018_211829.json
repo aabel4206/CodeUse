@@ -1,0 +1,30 @@
+{
+  "timestamp": 1760840309.745685,
+  "original_instruction": "check if the login form works",
+  "improved_prompt": {
+    "goal": "Validate login form functionality",
+    "test_steps": [
+      "Navigate to login page",
+      "Enter valid credentials",
+      "Submit login form",
+      "Verify successful authentication"
+    ],
+    "page_url": null,
+    "target_selectors": {
+      "username_field": null,
+      "password_field": null,
+      "submit_button": null
+    },
+    "expected_outcomes": [
+      "User redirected to dashboard/home page",
+      "Session token generated",
+      "User profile information displayed"
+    ],
+    "additional_clarification_needed": [
+      "Specific website/application URL",
+      "Test account credentials",
+      "Exact login form element identifiers"
+    ]
+  },
+  "system_prompt_used": "You rewrite raw user requests into precise,\nobservable computer-use tasks. \nClarify the goal, page URL, target selector, and measurable outcomes.\nReturn JSON with improved_prompt."
+}

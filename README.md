@@ -67,6 +67,34 @@ tool/
 
 ## Getting Started
 
+### Environment Setup
+
+1. **Copy the environment template**:
+   ```bash
+   cp env.example .env
+   ```
+
+2. **Fill in your API keys** in the `.env` file:
+   ```bash
+   # Required API Keys
+   GEMINI_API_KEY=your_gemini_api_key_here
+   OPENROUTER_API_KEY=your_openrouter_api_key_here
+   OPENAI_API_KEY=your_openai_api_key_here
+   
+   # Optional Configuration
+   OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
+   DEFAULT_TARGET_URL=http://localhost:5173
+   EXECUTOR_BASE_URL=http://localhost:8001
+   HTTP_REFERER=http://localhost
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Development
+
 1. Each team member should focus on their assigned module
 2. Use the existing interfaces and data structures
 3. The `main.py` file coordinates all modules

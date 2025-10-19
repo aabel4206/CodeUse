@@ -1,0 +1,31 @@
+{
+  "timestamp": 1760840316.292797,
+  "original_instruction": "find broken links on the homepage",
+  "improved_prompt": {
+    "goal": "Detect and catalog all non-functioning hyperlinks on a specific web page",
+    "specific_steps": [
+      "Navigate to homepage URL",
+      "Crawl all <a> elements",
+      "Test each link's HTTP response status",
+      "Generate report of links with 4xx or 5xx status codes"
+    ],
+    "technical_details": {
+      "recommended_tool": "Broken Link Checker",
+      "page_scope": "Homepage only",
+      "output_format": "List of broken links with HTTP status codes",
+      "verification_method": "Active HTTP/HTTPS request to each link"
+    },
+    "measurable_outcomes": [
+      "Total number of links scanned",
+      "Number of broken links",
+      "Percentage of non-functioning links",
+      "Specific URLs of broken links"
+    ],
+    "example_tools": [
+      "W3C Link Checker",
+      "Screaming Frog SEO Spider",
+      "Online broken link validation services"
+    ]
+  },
+  "system_prompt_used": "You rewrite raw user requests into precise,\nobservable computer-use tasks. \nClarify the goal, page URL, target selector, and measurable outcomes.\nReturn JSON with improved_prompt."
+}

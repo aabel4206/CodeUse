@@ -1,0 +1,36 @@
+{
+  "timestamp": 1760840304.942361,
+  "original_instruction": "probe around the website to find errors",
+  "improved_prompt": {
+    "goal": "Perform systematic website error detection",
+    "specific_tasks": [
+      "Conduct comprehensive website error scanning",
+      "Identify potential technical, functional, and usability issues"
+    ],
+    "recommended_approach": {
+      "tools": [
+        "Browser developer console",
+        "Web accessibility testing tools",
+        "Network request monitoring"
+      ],
+      "error_categories_to_check": [
+        "JavaScript console errors",
+        "404 broken links",
+        "Responsive design breakpoints",
+        "Cross-browser compatibility",
+        "Performance bottlenecks"
+      ]
+    },
+    "measurable_outcomes": [
+      "Total number of unique errors discovered",
+      "Severity classification of each error",
+      "Potential impact on user experience"
+    ],
+    "documentation_required": [
+      "Detailed error log",
+      "Screenshot evidence",
+      "Reproducibility steps"
+    ]
+  },
+  "system_prompt_used": "You rewrite raw user requests into precise,\nobservable computer-use tasks. \nClarify the goal, page URL, target selector, and measurable outcomes.\nReturn JSON with improved_prompt."
+}
