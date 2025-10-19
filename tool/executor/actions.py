@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional, Sequence, Union
 
-from playwright.async_api import Page
+from playwright.async_api import (
+    BrowserContext,
+    Page,
+    TimeoutError as PlaywrightTimeoutError,
+)
 
 RUNS_ROOT = Path(__file__).resolve().parent / "runs"
 
@@ -15,6 +19,18 @@ def _run_dir(run_id: str) -> Path:
     run_path = RUNS_ROOT / run_id
     run_path.mkdir(parents=True, exist_ok=True)
     return run_path
+
+
+async def _ensure_visible(page: Page, selector: str, timeout_ms: int = 5000) -> None:
+    """Wait for ``selector`` to be visible, raising a helpful error on timeout."""
+    if not selector:
+        raise ValueError("Selector is required.")
+    try:
+        await page.wait_for_selector(selector, state="visible", timeout=timeout_ms)
+    except PlaywrightTimeoutError as exc:
+        raise ValueError(
+            f"Timed out waiting for selector '{selector}' to become visible."
+        ) from exc
 
 
 async def hover(page: Page, selector: str) -> Dict[str, Any]:
@@ -126,3 +142,183 @@ async def screenshot(page: Page, run_id: str, label: str) -> str:
     path = run_dir / f"{label}.png"
     await page.screenshot(path=str(path))
     return str(path)
+
+
+async def navigate(page: Page, url: str, timeout_ms: int = 10_000) -> Dict[str, Any]:
+    """Navigate to ``url`` and report the resulting page URL."""
+    if not url:
+        raise ValueError("URL is required.")
+    if timeout_ms <= 0:
+        raise ValueError("timeout_ms must be a positive integer.")
+    try:
+        await page.goto(url, timeout=timeout_ms)
+    except PlaywrightTimeoutError as exc:
+        raise ValueError(f"Timed out navigating to '{url}'.") from exc
+    return {"ok": True, "url": page.url}
+
+
+async def dblclick(page: Page, selector: str) -> Dict[str, Any]:
+    """Double-click the element matching ``selector``."""
+    await _ensure_visible(page, selector)
+    await page.dblclick(selector)
+    return {"ok": True}
+
+
+async def type_text(
+    page: Page, selector: str, text: str, delay_ms: int = 0
+) -> Dict[str, Any]:
+    """Type ``text`` into the element matching ``selector``."""
+    if text is None:
+        raise ValueError("text must not be None.")
+    if delay_ms < 0:
+        raise ValueError("delay_ms cannot be negative.")
+    await _ensure_visible(page, selector)
+    await page.click(selector)
+    await page.type(selector, text, delay=delay_ms)
+    return {"ok": True}
+
+
+async def press(page: Page, selector: str, key: str) -> Dict[str, Any]:
+    """Press ``key`` while the element matching ``selector`` is focused."""
+    if not key:
+        raise ValueError("key is required.")
+    await _ensure_visible(page, selector)
+    await page.press(selector, key)
+    return {"ok": True}
+
+
+async def fill(page: Page, selector: str, value: str) -> Dict[str, Any]:
+    """Fill the element matching ``selector`` with ``value``."""
+    if value is None:
+        raise ValueError("value must not be None.")
+    await _ensure_visible(page, selector)
+    await page.fill(selector, value)
+    return {"ok": True}
+
+
+async def check(page: Page, selector: str) -> Dict[str, Any]:
+    """Check a checkbox or radio button."""
+    await _ensure_visible(page, selector)
+    await page.check(selector)
+    return {"ok": True}
+
+
+async def uncheck(page: Page, selector: str) -> Dict[str, Any]:
+    """Uncheck a checkbox."""
+    await _ensure_visible(page, selector)
+    await page.uncheck(selector)
+    return {"ok": True}
+
+
+async def select_option(
+    page: Page, selector: str, value: Union[str, Sequence[str]]
+) -> Dict[str, Any]:
+    """Select one or more option values."""
+    await _ensure_visible(page, selector)
+    if isinstance(value, str):
+        values = [value]
+    else:
+        values = list(value)
+    if not values:
+        raise ValueError("At least one option value must be provided.")
+    selected = await page.select_option(
+        selector, values if len(values) > 1 else values[0]
+    )
+    return {"ok": True, "selected": [item for item in selected if item is not None]}
+
+
+async def drag_and_drop(page: Page, source: str, target: str) -> Dict[str, Any]:
+    """Drag from ``source`` selector to ``target`` selector."""
+    await _ensure_visible(page, source)
+    await _ensure_visible(page, target)
+    await page.drag_and_drop(source, target)
+    return {"ok": True}
+
+
+async def scroll_to(page: Page, x: int = 0, y: int = 0) -> Dict[str, Any]:
+    """Scroll the window to ``(x, y)``."""
+    await page.evaluate(
+        "({x, y}) => window.scrollTo(x, y)", {"x": int(x), "y": int(y)}
+    )
+    return {"ok": True}
+
+
+async def wait_for_selector(
+    page: Page,
+    selector: str,
+    state: Literal["attached", "detached", "visible", "hidden"] = "visible",
+    timeout_ms: int = 5000,
+) -> Dict[str, Any]:
+    """Wait for ``selector`` to reach ``state``."""
+    if state not in {"attached", "detached", "visible", "hidden"}:
+        raise ValueError(
+            "state must be one of 'attached', 'detached', 'visible', or 'hidden'."
+        )
+    if timeout_ms <= 0:
+        raise ValueError("timeout_ms must be a positive integer.")
+    try:
+        await page.wait_for_selector(selector, state=state, timeout=timeout_ms)
+    except PlaywrightTimeoutError as exc:
+        raise ValueError(
+            f"Timed out waiting for selector '{selector}' to become {state}."
+        ) from exc
+    return {"ok": True, "state": state}
+
+
+async def get_attribute(page: Page, selector: str, name: str) -> Dict[str, Any]:
+    """Return the attribute ``name`` value for ``selector``."""
+    if not name:
+        raise ValueError("name is required.")
+    await _ensure_visible(page, selector)
+    value = await page.get_attribute(selector, name)
+    return {"ok": True, "name": name, "value": value}
+
+
+async def screenshot_fullpage(page: Page, run_id: str, label: str) -> Dict[str, Any]:
+    """Capture a full-page screenshot and return its path."""
+    run_dir = _run_dir(run_id)
+    path = run_dir / f"{label}.png"
+    await page.screenshot(path=str(path), full_page=True)
+    return {"ok": True, "path": str(path)}
+
+
+async def start_tracing(
+    context: BrowserContext, screenshots: bool = True, snapshots: bool = True
+) -> Dict[str, Any]:
+    """Start Playwright tracing for the provided browser context."""
+    if context is None:
+        raise ValueError("context is required.")
+    await context.tracing.start(screenshots=screenshots, snapshots=snapshots)
+    return {"ok": True}
+
+
+async def stop_tracing(
+    context: BrowserContext, run_id: str, label: str = "trace"
+) -> Dict[str, Any]:
+    """Stop tracing and persist the trace archive."""
+    if context is None:
+        raise ValueError("context is required.")
+    run_dir = _run_dir(run_id)
+    path = run_dir / f"{label}.zip"
+    await context.tracing.stop(path=str(path))
+    return {"ok": True, "path": str(path)}
+
+
+# if __name__ == "__main__":
+#     import asyncio
+#     from playwright.async_api import async_playwright
+#
+#     async def _demo():
+#         async with async_playwright() as pw:
+#             browser = await pw.chromium.launch(headless=False, slow_mo=250)
+#             context = await browser.new_context()
+#             page = await context.new_page()
+#             await navigate(page, "http://localhost:5173")
+#             await wait_for_selector(page, "#btn1")
+#             await click(page, "#btn1")
+#             await type_text(page, "#name", "Playwright")
+#             await screenshot_fullpage(page, "demo123", "after")
+#             await context.close()
+#             await browser.close()
+#
+#     asyncio.run(_demo())
