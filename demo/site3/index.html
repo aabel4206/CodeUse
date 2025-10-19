@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Incident Response Console</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <h1>Incident Response Console</h1>
+    <p>Trigger runbooks, communicate status, and escalate blockers in one place.</p>
+  </header>
+
+  <main>
+    <section class="controls">
+      <button id="btn1" class="control-btn primary">Initiate Containment</button>
+      <button id="btn2" class="control-btn secondary">Start Root Cause Analysis</button>
+      <button id="btn3" class="control-btn tertiary">Notify Stakeholders</button>
+      <button id="btn4" class="control-btn problematic">Deploy Hotfix (disabled)</button>
+    </section>
+
+    <section class="status">
+      <h2>On-call Playbooks</h2>
+      <ul>
+        <li><a class="working" href="https://status.example.com/oncall">Current On-call Schedule</a></li>
+        <li><a class="working" href="https://www.example.com/runbook">Platform Runbook</a></li>
+        <li><a class="broken" href="/playbooks/hotfix">Hotfix Instructions</a> <span class="tag issue">404</span></li>
+      </ul>
+    </section>
+
+    <section class="activity" aria-live="polite">
+      <h2>Activity Log</h2>
+      <div id="log" class="log">Awaiting command input…</div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 Northwind Ops. Contact <a href="mailto:incident@northwindapps.com">incident@northwindapps.com</a></p>
+  </footer>
+
+  <script>
+    const buttons = document.querySelectorAll(".control-btn:not(.problematic)");
+    const log = document.getElementById("log");
+
+    const copy = {
+      btn1: "Containment protocol started. Network segmentation in progress.",
+      btn2: "Root cause analysis initiated. Logs pulled to investigation workspace.",
+      btn3: "Stakeholders notified across email, Slack, and incident channels."
+    };
+
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        btn.classList.add("completed");
+        btn.setAttribute("aria-pressed", "true");
+        const message = copy[btn.id] || "Action confirmed.";
+        log.textContent = message;
+      });
+    });
+  </script>
+</body>
+</html>

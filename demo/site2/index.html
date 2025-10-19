@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Operations Command Hub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-content">
+      <p class="eyebrow">Northwind Apps · Launch Week</p>
+      <h1>Operations Command Hub</h1>
+      <p class="hero-copy">
+        Monitor launch readiness, activate escalation plans, and keep the org aligned across
+        product, engineering, design, and customer teams.
+      </p>
+      <button id="btn1" class="cta">Open Launch Playbook</button>
+    </div>
+    <div class="hero-overlay" aria-hidden="true">
+      <span class="pulse"></span>
+      <span class="overlay-label">Live sync pending…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="layout">
+      <article class="panel actions" aria-labelledby="action-title">
+        <h2 id="action-title">Critical Actions</h2>
+        <p class="panel-copy">
+          Trigger the top-level runbooks. Completed actions update the live status feed.
+        </p>
+        <div class="action-buttons" role="group" aria-label="Operations actions">
+          <button class="action-btn" data-action="briefing">
+            Send Daily Briefing
+          </button>
+          <button class="action-btn" data-action="incident">
+            Open Incident Tracker
+          </button>
+          <button class="action-btn" data-action="notify">
+            Notify Stakeholders
+          </button>
+          <button class="action-btn disabled" aria-disabled="true">
+            Download Budget Report
+          </button>
+        </div>
+        <div id="action-output" class="action-output" role="status" aria-live="polite">
+          No actions dispatched yet.
+        </div>
+      </article>
+
+      <article class="panel roster" aria-labelledby="roster-title">
+        <h2 id="roster-title">Team Availability</h2>
+        <div class="member-card online">
+          <div>
+            <h3>Samira Patel</h3>
+            <p class="role">Product Manager</p>
+            <p class="summary">Leading beta cohort review; ready for stakeholder updates.</p>
+          </div>
+          <span class="status">Working</span>
+        </div>
+        <div class="member-card online">
+          <div>
+            <h3>Diego Morales</h3>
+            <p class="role">Engineering Lead</p>
+            <p class="summary">Monitoring rollback plan and validating post-deploy smoke tests.</p>
+          </div>
+          <span class="status">Working</span>
+        </div>
+        <div class="member-card offline">
+          <div>
+            <h3>Clara Nguyen</h3>
+            <p class="role">QA Analyst</p>
+            <p class="summary">On lunch break; regression suite continues in parallel.</p>
+          </div>
+          <span class="status">Not Working</span>
+        </div>
+        <div class="member-card offline">
+          <div>
+            <h3>Jordan Smith</h3>
+            <p class="role">Design Lead</p>
+            <p class="summary">Blocked by external vendor assets; waiting on replacement files.</p>
+          </div>
+          <span class="status">Not Working</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel links" aria-labelledby="links-title">
+      <h2 id="links-title">Key Links</h2>
+      <ul>
+        <li>
+          <a class="working" href="https://www.example.com/dashboard">Executive Dashboard</a>
+          <span class="link-detail">Loads KPI rollups.</span>
+        </li>
+        <li>
+          <a class="working" href="https://status.example.com/incidents">Incident History</a>
+          <span class="link-detail">Latest alerts and response notes.</span>
+        </li>
+        <li>
+          <a class="working" href="https://cal.example.com/war-room">Join War Room</a>
+          <span class="link-detail">Conference bridge is active.</span>
+        </li>
+        <li>
+          <a class="broken" href="/reports/weekly-summary">Weekly Summary Report</a>
+          <span class="link-detail error">Returns 404 — investigate storage bucket.</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel timeline" aria-labelledby="timeline-title">
+      <h2 id="timeline-title">Launch Timeline</h2>
+      <ol>
+        <li>
+          <strong>Feature freeze</strong>
+          <span class="meta complete">Completed · 09:00</span>
+        </li>
+        <li>
+          <strong>Accessibility audit</strong>
+          <span class="meta progress">In progress · ETA 14:00</span>
+        </li>
+        <li>
+          <strong>Executive sign-off</strong>
+          <span class="meta delayed">Delayed · Waiting on design updates</span>
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 Northwind Apps. Contact <a href="mailto:ops@northwindapps.com">ops@northwindapps.com</a></p>
+  </footer>
+
+  <script>
+    const ACTION_COPY = {
+      briefing: {
+        status: "Daily briefing sent to leadership and GTM teams.",
+        cta: "Briefing Sent ✓",
+      },
+      incident: {
+        status: "Incident tracker opened in a new tab with pre-filled context.",
+        cta: "Tracker Activated ✓",
+      },
+      notify: {
+        status: "Stakeholders notified via email and Slack escalations.",
+        cta: "Notifications Sent ✓",
+      },
+    };
+
+    const output = document.getElementById("action-output");
+    const buttons = document.querySelectorAll(".action-btn[data-action]");
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const key = button.dataset.action;
+        const copy = ACTION_COPY[key];
+        if (!copy) return;
+
+        output.textContent = copy.status;
+        button.textContent = copy.cta;
+        button.classList.add("completed");
+        button.setAttribute("aria-pressed", "true");
+      });
+    });
+  </script>
+</body>
+</html>

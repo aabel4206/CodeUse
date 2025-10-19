@@ -198,7 +198,7 @@ async def _run_audit_async(
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(
-            headless=True,
+            headless=False,
             slow_mo=slow_ms if slow_ms > 0 else 0,
         )
         context = await browser.new_context()

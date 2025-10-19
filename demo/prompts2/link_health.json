@@ -1,0 +1,17 @@
+{
+  "title": "Command Hub Link Health Check",
+  "task": "Audit the primary links and capture which ones resolve and which fail.",
+  "steps": [
+    {"action": "go_to", "url": "<URL>"},
+    {"action": "scan_links"},
+    {"action": "check_link", "label": "Executive Dashboard", "selector": "a.working[href*='dashboard']"},
+    {"action": "check_link", "label": "Incident History", "selector": "a.working[href*='status']"},
+    {"action": "check_link", "label": "Join War Room", "selector": "a.working[href*='war-room']"},
+    {"action": "check_link", "label": "Weekly Summary Report", "selector": "a.broken[href*='weekly-summary']"}
+  ],
+  "expected_report_keys": [
+    "working_links",
+    "broken_links",
+    "scan_summary"
+  ]
+}

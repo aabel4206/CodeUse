@@ -1,0 +1,25 @@
+{
+  "title": "Incident Console Buttons & Links Audit",
+  "task": "Verify working incident response buttons update the activity log, flag the problematic button, and report link health.",
+  "steps": [
+    {"action": "go_to", "url": "<URL>"},
+    {"action": "click", "selector": "#btn1"},
+    {"action": "assert_text", "selector": "#log", "contains": "Containment protocol"},
+    {"action": "click", "selector": "#btn2"},
+    {"action": "assert_text", "selector": "#log", "contains": "Root cause analysis"},
+    {"action": "click", "selector": "#btn3"},
+    {"action": "assert_text", "selector": "#log", "contains": "Stakeholders"},
+    {"action": "check_disabled", "selector": "#btn4"},
+    {"action": "scan_links"},
+    {"action": "check_link", "label": "Hotfix Instructions", "selector": "a.broken[href='/playbooks/hotfix']"},
+    {"action": "screenshot", "label": "buttons_and_links"}
+  ],
+  "expected_report_keys": [
+    "button_results",
+    "disabled_button_selector",
+    "log_updates",
+    "broken_links",
+    "working_links",
+    "screenshot_path"
+  ]
+}

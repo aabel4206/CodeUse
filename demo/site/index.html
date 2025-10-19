@@ -18,8 +18,12 @@
   <button class="tiny-btn">OK</button>
 
   <script>
-    // Uncomment to add a console error example:
-    // console.error("Demo console error for testing");
+    const trackedButtons = document.querySelectorAll("button");
+    trackedButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        btn.classList.add("clicked");
+      });
+    });
   </script>
 </body>
 </html>

@@ -49,6 +49,7 @@ async def execute(req: ExecRequest):
             page.set_default_timeout(5000)  # 5s per Playwright op
 
             await page.goto(str(req.url), timeout=10_000)
+            results.append({"fn": "goto", "ok": True, "res": {"url": await actions.current_url(page)}})
 
             selector_wait_error: Optional[str] = None
             try:
@@ -58,22 +59,32 @@ async def execute(req: ExecRequest):
                 errors.append(selector_wait_error)
 
             before_path = await actions.screenshot(page, run_id, f"step-{req.step}-before")
+            results[-1]["screenshot"] = before_path
 
-            for call in req.actions:
+            for index, call in enumerate(req.actions, start=1):
                 action_fn = getattr(actions, call.fn, None)
                 if action_fn is None:
                     msg = f"Unknown action: {call.fn}"
-                    results.append({"fn": call.fn, "ok": False, "error": msg})
                     errors.append(msg)
+                    label = f"step-{req.step}-action-{index}-{call.fn}"
+                    screenshot_path = await actions.screenshot(page, run_id, label)
+                    results.append(
+                        {"fn": call.fn, "ok": False, "error": msg, "screenshot": screenshot_path}
+                    )
                     continue
 
                 try:
                     response = await action_fn(page, **call.args)
-                    results.append({"fn": call.fn, "ok": True, "res": response})
+                    entry: Dict[str, Any] = {"fn": call.fn, "ok": True, "res": response}
                 except (PlaywrightTimeout, PlaywrightError, Exception) as exc:
                     msg = f"Action {call.fn} failed: {exc}"
-                    results.append({"fn": call.fn, "ok": False, "error": str(exc)})
                     errors.append(msg)
+                    entry = {"fn": call.fn, "ok": False, "error": str(exc)}
+
+                label = f"step-{req.step}-action-{index}-{call.fn}"
+                screenshot_path = await actions.screenshot(page, run_id, label)
+                entry["screenshot"] = screenshot_path
+                results.append(entry)
 
             metrics: Dict[str, Any] = {}
             if selector_wait_error is None:
