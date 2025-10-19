@@ -120,7 +120,7 @@ async def _collect_links(page) -> List[Dict[str, Any]]:
 
 async def _collect_dom_scan(page) -> Dict[str, Any]:
     return await page.evaluate(
-        """
+        r"""
         () => {
             const summarize = (el) => {
                 if (!el) return 'unknown';
@@ -157,7 +157,7 @@ async def _collect_dom_scan(page) -> Dict[str, Any]:
 
 async def _collect_overlaps(page, selector: str) -> List[Dict[str, Any]]:
     return await page.evaluate(
-        """
+        r"""
         (sel) => {
             const el = document.querySelector(sel);
             if (!el) return [];
