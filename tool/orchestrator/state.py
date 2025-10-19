@@ -134,3 +134,29 @@ class AuditResult(BaseModel):
 def make_issue_id(prefix: str, n: int) -> str:
     """Create a stable, human-readable issue ID like 'hover-003'."""
     return f"{prefix}-{n:03d}"
+
+
+# -------------------------
+# File I/O functions for loop.py
+# -------------------------
+
+import json
+from pathlib import Path
+
+
+def save_observation(run_dir: Path, step: int, observation: Dict[str, Any]):
+    """Save an observation to a step file."""
+    step_file = run_dir / f"step-{step}.json"
+    step_file.write_text(json.dumps(observation, indent=2, ensure_ascii=False))
+
+
+def save_result(run_dir: Path, result: Dict[str, Any]):
+    """Save the final result to result.json."""
+    result_file = run_dir / "result.json"
+    result_file.write_text(json.dumps(result, indent=2, ensure_ascii=False))
+
+
+def update_status(run_dir: Path, status: Dict[str, Any]):
+    """Update the status.json file."""
+    status_file = run_dir / "status.json"
+    status_file.write_text(json.dumps(status, indent=2, ensure_ascii=False))
