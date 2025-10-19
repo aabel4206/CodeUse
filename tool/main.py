@@ -14,7 +14,7 @@ try:
 except ImportError:
     pass
 
-from orchestrator.loop import run_task
+from tool.orchestrator.loop import run_task
 from llm_parse.parser import OpenRouterParser
 from google import genai  # Gemini SDK
 
