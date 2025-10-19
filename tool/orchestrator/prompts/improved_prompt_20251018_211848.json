@@ -1,0 +1,36 @@
+{
+  "timestamp": 1760840328.4806974,
+  "original_instruction": "look for accessibility issues",
+  "improved_prompt": {
+    "goal": "Conduct comprehensive web accessibility audit",
+    "specific_tasks": [
+      "Analyze webpage for WCAG 2.1 compliance",
+      "Identify potential accessibility barriers",
+      "Generate detailed accessibility report"
+    ],
+    "recommended_tools": [
+      "WAVE Web Accessibility Evaluation Tool",
+      "aXe DevTools",
+      "WebAIM WCAG 2.1 Checklist"
+    ],
+    "key_evaluation_areas": [
+      "Color contrast ratios",
+      "Screen reader compatibility",
+      "Keyboard navigation",
+      "Alternative text for images",
+      "Form input labels",
+      "Semantic HTML structure"
+    ],
+    "measurable_outcomes": [
+      "Total number of accessibility issues detected",
+      "Severity level of each issue",
+      "Recommended remediation steps"
+    ],
+    "url_placeholder": "https://[website-to-evaluate].com",
+    "accessibility_standards": [
+      "WCAG 2.1 Level AA compliance",
+      "ADA Section 508 guidelines"
+    ]
+  },
+  "system_prompt_used": "You rewrite raw user requests into precise,\nobservable computer-use tasks. \nClarify the goal, page URL, target selector, and measurable outcomes.\nReturn JSON with improved_prompt."
+}

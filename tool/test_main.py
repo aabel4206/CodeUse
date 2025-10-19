@@ -4,6 +4,7 @@ Comprehensive test suite for main.py FastAPI application
 import pytest
 import json
 import asyncio
+import os
 from pathlib import Path
 from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
@@ -32,7 +33,8 @@ class TestModels:
         """Test TaskRequest with default values"""
         request = TaskRequest()
         assert request.instruction == "probe around the website to find errors or suggest improvements"
-        assert request.target_url == "http://localhost:5173"
+        # Note: target_url now uses environment variable with fallback
+        assert request.target_url in ["http://localhost:5173", os.getenv("DEFAULT_TARGET_URL", "http://localhost:5173")]
     
     def test_task_request_custom_values(self):
         """Test TaskRequest with custom values"""

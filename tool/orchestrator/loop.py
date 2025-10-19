@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import httpx
+import os
 
 try:  # Load environment variables from .env when available
     from dotenv import load_dotenv
@@ -16,7 +17,10 @@ try:  # Load environment variables from .env when available
 except Exception:
     pass
 
-from .state import save_observation, save_result, update_status
+# OpenRouter client for Claude 3.5 Haiku
+from openai import OpenAI
+
+from .state import State, save_observation, save_result, update_status
 from tool.orchestrator.state import ProbeEvent
 
 # Normalization, aggregation, and persistence helpers
@@ -25,6 +29,121 @@ from tool.reporter.aggregator import build_audit_result
 from tool.reporter.reporter import write_result_json
 
 from .prompts.system_prompts import SYSTEM_PROMPT  # optional; can be blank
+
+# -----------------------
+# OpenRouter client initialization
+# -----------------------
+openrouter_client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+)
+
+# -----------------------
+# Prompt improvement system
+# -----------------------
+improve_prompt_system = """You rewrite raw user requests into precise,
+observable computer-use tasks. 
+Clarify the goal, page URL, target selector, and measurable outcomes.
+Return JSON with improved_prompt."""
+
+
+async def improve_prompt_with_claude(raw_instruction: str, save_to_file: bool = True) -> str:
+    """
+    Use Claude 3.5 Haiku via OpenRouter to improve the raw user instruction
+    into a precise, observable computer-use task.
+    """
+    try:
+        response = openrouter_client.chat.completions.create(
+            model="anthropic/claude-3.5-haiku",
+            messages=[
+                {"role": "system", "content": improve_prompt_system},
+                {"role": "user", "content": raw_instruction}
+            ],
+            temperature=0.3
+        )
+        
+        # Extract the improved prompt from the response
+        improved_prompt = response.choices[0].message.content.strip()
+        
+        # Try to parse as JSON if it's wrapped in JSON format
+        try:
+            import json
+            parsed = json.loads(improved_prompt)
+            if "improved_prompt" in parsed:
+                improved_prompt = parsed["improved_prompt"]
+            elif isinstance(parsed, dict):
+                # If it's a structured response, convert to readable format
+                improved_prompt = _format_structured_response(parsed)
+        except json.JSONDecodeError:
+            # If not JSON, use the raw response
+            pass
+        
+        # Save the improved prompt to a file for future use
+        if save_to_file:
+            _save_improved_prompt(raw_instruction, improved_prompt)
+            
+        return improved_prompt
+        
+    except Exception as e:
+        # Fallback to original instruction if Claude fails
+        print(f"Warning: Failed to improve prompt with Claude: {e}")
+        return raw_instruction
+
+
+def _format_structured_response(parsed: dict) -> str:
+    """Convert a structured JSON response into a readable prompt."""
+    parts = []
+    
+    # Add goal if present
+    if "goal" in parsed:
+        parts.append(f"Goal: {parsed['goal']}")
+    
+    # Add specific tasks if present
+    if "specific_tasks" in parsed and isinstance(parsed["specific_tasks"], list):
+        parts.append("Specific Tasks:")
+        for i, task in enumerate(parsed["specific_tasks"], 1):
+            parts.append(f"{i}. {task}")
+    
+    # Add recommended approach if present
+    if "recommended_approach" in parsed:
+        approach = parsed["recommended_approach"]
+        if isinstance(approach, dict):
+            if "tools" in approach:
+                parts.append(f"Recommended Tools: {', '.join(approach['tools'])}")
+            if "error_categories_to_check" in approach:
+                parts.append("Error Categories to Check:")
+                for category in approach["error_categories_to_check"]:
+                    parts.append(f"- {category}")
+    
+    # Add observable outcomes if present
+    if "observable_outcomes" in parsed and isinstance(parsed["observable_outcomes"], list):
+        parts.append("Expected Outcomes:")
+        for outcome in parsed["observable_outcomes"]:
+            parts.append(f"- {outcome}")
+    
+    # Join all parts with newlines
+    return "\n".join(parts) if parts else str(parsed)
+
+
+def _save_improved_prompt(original: str, improved: str):
+    """Save the improved prompt to a file for future reference."""
+    prompt_data = {
+        "timestamp": time.time(),
+        "original_instruction": original,
+        "improved_prompt": improved,
+        "system_prompt_used": improve_prompt_system
+    }
+    
+    # Save to prompts directory
+    prompts_dir = Path("tool/orchestrator/prompts")
+    prompts_dir.mkdir(exist_ok=True)
+    
+    # Create a filename based on timestamp
+    timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+    prompt_file = prompts_dir / f"improved_prompt_{timestamp_str}.json"
+    
+    _save_json(prompt_file, prompt_data)
+    print(f"Improved prompt saved to: {prompt_file}")
 
 
 # -----------------------
@@ -53,7 +172,7 @@ async def run_task(
     # -----------------------
     # 1) Build CU request
     # -----------------------
-    contents = _build_gemini_contents(task_spec)
+    contents = await _build_gemini_contents(task_spec)
     generate_content_config = _build_gemini_config(excluded_functions or ["drag_and_drop"])
 
     # -----------------------
@@ -91,7 +210,7 @@ async def run_task(
 
     # Build ExecRequest payload
     exec_payload = {
-        "url": task_spec.get("target_url") or "https://example.com",  # Ensure valid URL
+        "url": task_spec.get("target_url") or os.getenv("DEFAULT_TARGET_URL", "https://example.com"),  # Ensure valid URL
         "actions": actions,
         "selector": task_spec.get("target_selector", "body"),
         "step": 1,
@@ -225,17 +344,24 @@ def _build_gemini_config(excluded: List[str]):
     )
 
 
-def _build_gemini_contents(task_spec: Dict[str, Any]):
+async def _build_gemini_contents(task_spec: Dict[str, Any]):
     """
     Build a user message that tells CU exactly what to do in one pass.
-    Simple instruction to check the webpage for errors.
+    Uses Claude 3.5 Haiku to improve the raw instruction into a precise task.
     """
     from google import genai
 
     url = task_spec.get("target_url")
-
-    # Simple instruction for error checking
-    user_text = f"Check the webpage for errors"
+    raw_instruction = task_spec.get("instruction", "Check the webpage for errors")
+    
+    # Use Claude to improve the prompt
+    improved_prompt = await improve_prompt_with_claude(raw_instruction)
+    
+    # Add URL context if available
+    if url:
+        user_text = f"URL: {url}\n\nTask: {improved_prompt}"
+    else:
+        user_text = improved_prompt
 
     return [
         genai.types.Content(

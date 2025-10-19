@@ -1,0 +1,62 @@
+{
+  "timestamp": 1760840336.674448,
+  "original_instruction": "I want to test my e-commerce website. Please check the entire user journey \n    from landing page to checkout, looking for any issues with navigation, \n    product selection, cart functionality, and payment process. Also check \n    for mobile responsiveness and accessibility compliance.",
+  "improved_prompt": {
+    "goal": "Comprehensive e-commerce website user experience testing",
+    "specific_test_scenarios": [
+      {
+        "stage": "Landing Page",
+        "tasks": [
+          "Verify page load speed",
+          "Check responsive design across devices",
+          "Test navigation menu functionality",
+          "Validate accessibility (screen reader compatibility, color contrast)"
+        ]
+      },
+      {
+        "stage": "Product Browsing",
+        "tasks": [
+          "Navigate product categories",
+          "Test product search functionality",
+          "Verify product detail page information",
+          "Check image loading and zoom capabilities"
+        ]
+      },
+      {
+        "stage": "Cart Interaction",
+        "tasks": [
+          "Add products to cart",
+          "Modify cart quantities",
+          "Remove items",
+          "Validate price calculations"
+        ]
+      },
+      {
+        "stage": "Checkout Process",
+        "tasks": [
+          "Complete user registration/guest checkout",
+          "Enter shipping information",
+          "Select payment methods",
+          "Process transaction",
+          "Verify confirmation page"
+        ]
+      }
+    ],
+    "testing_devices": [
+      "Desktop browser",
+      "Mobile browsers (iOS/Android)",
+      "Tablet devices"
+    ],
+    "accessibility_standards": [
+      "WCAG 2.1 compliance",
+      "Screen reader compatibility",
+      "Keyboard navigation"
+    ],
+    "performance_metrics": [
+      "Page load times",
+      "Interaction responsiveness",
+      "Error handling"
+    ]
+  },
+  "system_prompt_used": "You rewrite raw user requests into precise,\nobservable computer-use tasks. \nClarify the goal, page URL, target selector, and measurable outcomes.\nReturn JSON with improved_prompt."
+}

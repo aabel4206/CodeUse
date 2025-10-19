@@ -1,0 +1,42 @@
+{
+  "timestamp": 1760840322.3842268,
+  "original_instruction": "test the shopping cart functionality",
+  "improved_prompt": {
+    "goal": "Verify e-commerce shopping cart functionality",
+    "specific_tasks": [
+      "Navigate to product page",
+      "Add item to cart",
+      "Verify item appears in cart",
+      "Check price calculation",
+      "Test quantity adjustment",
+      "Validate cart removal process"
+    ],
+    "test_scenarios": [
+      {
+        "page_url": "[specific e-commerce site URL]",
+        "steps": [
+          "Select a product",
+          "Click 'Add to Cart'",
+          "Open cart view",
+          "Validate product details"
+        ],
+        "validation_checks": [
+          "Correct product added",
+          "Accurate price displayed",
+          "Quantity matches selection"
+        ]
+      }
+    ],
+    "expected_outcomes": [
+      "Cart updates dynamically",
+      "Prices calculate correctly",
+      "User can modify cart contents"
+    ],
+    "potential_test_tools": [
+      "Selenium WebDriver",
+      "Cypress",
+      "Manual browser testing"
+    ]
+  },
+  "system_prompt_used": "You rewrite raw user requests into precise,\nobservable computer-use tasks. \nClarify the goal, page URL, target selector, and measurable outcomes.\nReturn JSON with improved_prompt."
+}

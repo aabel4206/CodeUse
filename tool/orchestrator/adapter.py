@@ -4,6 +4,13 @@ import json
 import os
 from typing import Any, Dict, Tuple
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 import httpx
 
 
@@ -164,7 +171,7 @@ def normalize_with_openrouter(raw_executor_json: Dict[str, Any]) -> Tuple[Dict[s
     api_key = os.getenv("OPENROUTER_API_KEY", "")
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "HTTP-Referer": "http://localhost",
+        "HTTP-Referer": os.getenv("HTTP_REFERER", "http://localhost"),
         "X-Title": "codeuse-normalizer",
     }
     payload = {
