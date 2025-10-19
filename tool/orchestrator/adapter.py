@@ -71,6 +71,17 @@ def _strip_json(text: str) -> str:
     return s.strip()
 
 
+def _pick_first(*values: Any) -> Any:
+    for value in values:
+        if value is None:
+            continue
+        # Treat empty strings as missing for timing fields, but keep falsy numbers like 0.0
+        if isinstance(value, str) and value == "":
+            continue
+        return value
+    return None
+
+
 def _fallback_normalize(raw_executor_json: Dict[str, Any]) -> Tuple[Dict[str, Any] | None, Dict[str, Any]]:
     """Local best-effort mapper when OpenRouter is unavailable."""
     obs = raw_executor_json.get("observation", {}) or {}
@@ -93,15 +104,15 @@ def _fallback_normalize(raw_executor_json: Dict[str, Any]) -> Tuple[Dict[str, An
     before = metrics.get("before") or {}
     after = metrics.get("after") or {}
 
-    transition_duration = (
-        before.get("transitionDuration_ms")
-        or after.get("transitionDuration_ms")
-        or metrics.get("transitionDuration_ms")
+    transition_duration = _pick_first(
+        before.get("transitionDuration_ms"),
+        after.get("transitionDuration_ms"),
+        metrics.get("transitionDuration_ms"),
     )
-    transition_timing = (
-        before.get("transitionTimingFunction")
-        or after.get("transitionTimingFunction")
-        or metrics.get("transitionTimingFunction")
+    transition_timing = _pick_first(
+        before.get("transitionTimingFunction"),
+        after.get("transitionTimingFunction"),
+        metrics.get("transitionTimingFunction"),
     )
 
     action_plan = []
@@ -187,4 +198,3 @@ def normalize_with_openrouter(raw_executor_json: Dict[str, Any]) -> Tuple[Dict[s
         return primary, event
     except Exception:
         return _fallback_normalize(raw_executor_json)
-
