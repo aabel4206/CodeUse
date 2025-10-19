@@ -13,7 +13,6 @@ import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urlparse
 
 from playwright.async_api import (
     Error as PlaywrightError,
@@ -188,7 +187,6 @@ async def _run_audit_async(
     run_id: Optional[str] = None,
     *,
     slow_ms: int = 0,
-    follow_one_link: bool = True,
     selector: str = "#btn1",
 ) -> Dict[str, Any]:
     slow_ms = int(slow_ms or 0)
@@ -215,8 +213,6 @@ async def _run_audit_async(
                 except Exception:
                     pass
 
-        extras: Dict[str, Any] = {}
-
         try:
             await page.goto(target_url, timeout=15_000)
             results.append({"fn": "goto", "ok": True, "res": {"url": page.url}})
@@ -238,25 +234,11 @@ async def _run_audit_async(
             results.append({"fn": "measure_hover_metrics", "ok": True, "res": metrics})
             await _maybe_pause()
 
-            try:
-                await actions.click(page, selector, slow_ms=slow_ms)
-                await _maybe_pause()
-            except Exception as click_exc:
-                errors.append(f"click parent failed: {click_exc}")
-
             after_path = await actions.screenshot(page, run_id, "step-1-after")
             results.append({"fn": "screenshot", "ok": True, "res": {"path": after_path, "label": "after"}})
 
             link_probes = await _collect_links(page)
             dom_scan = await _collect_dom_scan(page)
-            dom_scan.setdefault("img_missing_alt_count", 0)
-            dom_scan.setdefault("clickables_without_name", [])
-
-            for probe in link_probes:
-                probe["page"] = "parent"
-
-            link_probes_parent_entry = {"url": page.url, "status": 200, "page": "parent"}
-            link_probes.insert(0, link_probes_parent_entry)
 
             observation = {
                 "selector": selector,
@@ -270,101 +252,6 @@ async def _run_audit_async(
                 "errors": errors,
             }
 
-            parent_origin = urlparse(page.url)
-            child_data: Optional[Dict[str, Any]] = None
-
-            child_url = None
-            if follow_one_link:
-                for entry in link_probes:
-                    url = entry.get("url")
-                    if not url:
-                        continue
-                    parsed = urlparse(url)
-                    if parsed.scheme not in ("http", "https"):
-                        continue
-                    if parsed.netloc != parent_origin.netloc:
-                        continue
-                    if parsed.fragment:
-                        continue
-                    if entry.get("page") == "parent" and url == page.url:
-                        continue
-                    child_url = url
-                    break
-
-            if child_url:
-                try:
-                    await page.goto(child_url, timeout=15_000)
-                    await _maybe_pause()
-                    results.append({"fn": "goto", "ok": True, "res": {"url": page.url}, "context": "child"})
-
-                    child_selector = "#btn2"
-                    child_before = await actions.screenshot(page, run_id, "child-step-1-before")
-                    await _maybe_pause()
-
-                    child_metrics = {}
-                    has_child_selector = await page.query_selector(child_selector)
-                    if has_child_selector:
-                        child_metrics = await actions.measure_hover_metrics(
-                            page, child_selector, slow_ms=slow_ms
-                        )
-                        child_bbox = await actions.get_bounding_client_rect(page, child_selector)
-                        child_overlaps = await _collect_overlaps(page, child_selector)
-                        child_metrics.update(
-                            {
-                                "bbox": child_bbox,
-                                "overlaps": child_overlaps,
-                                "url": page.url,
-                            }
-                        )
-                        results.append({
-                            "fn": "measure_hover_metrics",
-                            "ok": True,
-                            "res": child_metrics,
-                            "context": "child",
-                        })
-                        try:
-                            await actions.click(page, child_selector, slow_ms=slow_ms)
-                        except Exception as child_click_exc:
-                            errors.append(f"click child failed: {child_click_exc}")
-                        await _maybe_pause()
-                    else:
-                        child_metrics = {}
-
-                    child_after = await actions.screenshot(page, run_id, "child-step-1-after")
-                    results.append({
-                        "fn": "screenshot",
-                        "ok": True,
-                        "res": {"path": child_after, "label": "child-after"},
-                        "context": "child",
-                    })
-
-                    child_dom_scan = await _collect_dom_scan(page)
-                    child_links = await _collect_links(page)
-                    for probe in child_links:
-                        probe["page"] = "child"
-                    link_probes.append({"url": child_url, "status": 200, "page": "child"})
-                    link_probes.extend(child_links)
-
-                    dom_scan.setdefault("img_missing_alt_count", 0)
-                    dom_scan["img_missing_alt_count"] += child_dom_scan.get("img_missing_alt_count", 0)
-                    base_list = dom_scan.setdefault("clickables_without_name", [])
-                    base_list.extend(child_dom_scan.get("clickables_without_name", []))
-
-                    child_data = {
-                        "url": child_url,
-                        "selector": child_selector if has_child_selector else None,
-                        "metrics": child_metrics,
-                        "screenshots": {
-                            "before": child_before,
-                            "after": child_after,
-                        },
-                    }
-                except Exception as child_exc:
-                    errors.append(f"child navigation failed: {child_exc}")
-
-            if child_data:
-                extras["child"] = child_data
-
             return {
                 "run_id": run_id,
                 "results": results,
@@ -372,7 +259,6 @@ async def _run_audit_async(
                 "console": console_lines,
                 "links": link_probes,
                 "dom_scan": dom_scan,
-                "extras": extras,
             }
 
         except (PlaywrightTimeout, PlaywrightError) as exc:
@@ -391,7 +277,6 @@ async def _run_audit_async(
                 "console": console_lines,
                 "links": [],
                 "dom_scan": {},
-                "extras": {},
             }
         finally:
             await page.close()
@@ -404,7 +289,6 @@ def run_audit(
     run_id: Optional[str] = None,
     *,
     slow_ms: int = 0,
-    follow_one_link: bool = True,
 ) -> Dict[str, Any]:
     """Run the Playwright executor with optional slow motion."""
 
@@ -412,10 +296,101 @@ def run_audit(
         raise ValueError("target_url is required")
 
     return asyncio.run(
-        _run_audit_async(
-            target_url=target_url,
-            run_id=run_id,
-            slow_ms=slow_ms,
-            follow_one_link=follow_one_link,
-        )
+        _run_audit_async(target_url=target_url, run_id=run_id, slow_ms=slow_ms)
     )
+    
+    def _execute_python(self, code: str, timeout: int) -> Dict[str, Any]:
+        """Execute Python code safely."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(code)
+            temp_file = f.name
+        
+        try:
+            result = subprocess.run(
+                [sys.executable, temp_file],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=tempfile.gettempdir()
+            )
+            
+            return {
+                'success': result.returncode == 0,
+                'output': result.stdout,
+                'stderr': result.stderr,
+                'return_code': result.returncode
+            }
+        finally:
+            os.unlink(temp_file)
+    
+    def _execute_javascript(self, code: str, timeout: int) -> Dict[str, Any]:
+        """Execute JavaScript code using Node.js."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
+            f.write(code)
+            temp_file = f.name
+        
+        try:
+            result = subprocess.run(
+                ['node', temp_file],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=tempfile.gettempdir()
+            )
+            
+            return {
+                'success': result.returncode == 0,
+                'output': result.stdout,
+                'stderr': result.stderr,
+                'return_code': result.returncode
+            }
+        finally:
+            os.unlink(temp_file)
+    
+    def _execute_bash(self, code: str, timeout: int) -> Dict[str, Any]:
+        """Execute Bash code safely."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False) as f:
+            f.write(code)
+            temp_file = f.name
+        
+        try:
+            result = subprocess.run(
+                ['bash', temp_file],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=tempfile.gettempdir()
+            )
+            
+            return {
+                'success': result.returncode == 0,
+                'output': result.stdout,
+                'stderr': result.stderr,
+                'return_code': result.returncode
+            }
+        finally:
+            os.unlink(temp_file)
+    
+    def _execute_powershell(self, code: str, timeout: int) -> Dict[str, Any]:
+        """Execute PowerShell code safely."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False) as f:
+            f.write(code)
+            temp_file = f.name
+        
+        try:
+            result = subprocess.run(
+                ['powershell', '-ExecutionPolicy', 'Bypass', '-File', temp_file],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=tempfile.gettempdir()
+            )
+            
+            return {
+                'success': result.returncode == 0,
+                'output': result.stdout,
+                'stderr': result.stderr,
+                'return_code': result.returncode
+            }
+        finally:
+            os.unlink(temp_file)
