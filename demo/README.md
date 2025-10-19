@@ -18,14 +18,26 @@ It launches a test page, performs a slow-motion audit, and writes results to `ru
 
 ### Install dependencies
 
+**Linux/macOS:**
 ```bash
 python3 -m pip install -r requirements.txt
 ```
 
-If Playwright isn’t installed yet:
+**Windows:**
+```cmd
+python -m pip install -r requirements.txt
+```
 
+If Playwright isn't installed yet:
+
+**Linux/macOS:**
 ```bash
 python3 -m playwright install chromium
+```
+
+**Windows:**
+```cmd
+python -m playwright install chromium
 ```
 
 > 💡 **If `playwright` command not found:**
@@ -48,9 +60,16 @@ OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
 
 From a new terminal:
 
+**Linux/macOS:**
 ```bash
 cd demo/site
 python3 -m http.server 5173
+```
+
+**Windows:**
+```cmd
+cd demo\site
+python -m http.server 5173
 ```
 
 You can visit the page at
@@ -62,6 +81,7 @@ You can visit the page at
 
 From the project root:
 
+**Linux/macOS:**
 ```bash
 export PYTHONPATH="$(pwd)"
 
@@ -69,6 +89,20 @@ python3 demo/cli.py \
   --url http://localhost:5173 \
   --prompt-file demo/prompts/full_page_audit.json \
   --slow-ms 800
+```
+
+**Windows Command Prompt:**
+```cmd
+set PYTHONPATH=%CD%
+
+python demo\cli.py --url http://localhost:5173 --prompt-file demo\prompts\full_page_audit.json --slow-ms 800
+```
+
+**Windows PowerShell:**
+```powershell
+$env:PYTHONPATH = (Get-Location).Path
+
+python demo\cli.py --url http://localhost:5173 --prompt-file demo\prompts\full_page_audit.json --slow-ms 800
 ```
 
 * `--url` → page to audit
@@ -108,7 +142,7 @@ runs/<run_id>/ui.json
 | `ModuleNotFoundError: dotenv`             | `pip install python-dotenv`                     |
 | `TypeError: 'str' object is not callable` | Update to latest branch (executor patch)        |
 | `playwright: command not found`           | Run `npx playwright install chromium`           |
-| Browser never opens                       | Re-run `python3 -m playwright install chromium` |
+| Browser never opens                       | Re-run `python -m playwright install chromium` (Windows) or `python3 -m playwright install chromium` (Linux/macOS) |
 | SyntaxWarning `\s`                        | Harmless; raw strings now used                  |
 
 ---
@@ -117,8 +151,14 @@ runs/<run_id>/ui.json
 
 To repeat a run with different speed:
 
+**Linux/macOS:**
 ```bash
 python3 demo/cli.py --url http://localhost:5173 --slow-ms 500
+```
+
+**Windows:**
+```cmd
+python demo\cli.py --url http://localhost:5173 --slow-ms 500
 ```
 
 ---

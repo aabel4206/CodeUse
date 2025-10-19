@@ -59,6 +59,7 @@ def _make_ui_payload(audit: AuditResult) -> Dict[str, Any]:
                     "selector": issue.selector,
                     "summary": issue.summary,
                     "suggested_fix": issue.suggested_fix,
+                    "improvement_prompt": getattr(issue, 'improvement_prompt', None),
                     "screenshot": screenshot_path,
                 }
             )
