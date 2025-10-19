@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Sequence, Union
+from typing import Any, Dict, List, Literal, Optional, Sequence, Union
 
 from playwright.async_api import (
     BrowserContext,
@@ -159,6 +159,117 @@ async def navigate(page: Page, url: str, timeout_ms: int = 10_000) -> Dict[str, 
     return {"ok": True, "url": page.url}
 
 
+async def scan_links(page: Page) -> Dict[str, Any]:
+    """Collect all anchor elements with hrefs and probe their status codes."""
+    link_data = await page.evaluate(
+        """
+        () => Array.from(document.querySelectorAll('a[href]')).map(a => ({
+            href: a.getAttribute('href'),
+            url: a.href,
+            text: (a.innerText || '').trim()
+        }))
+        """
+    )
+
+    probes: List[Dict[str, Any]] = []
+    for item in link_data:
+        url = item.get("url")
+        status = 0
+        try:
+            if url:
+                response = await page.request.get(url)
+                status = response.status
+        except Exception:
+            status = 0
+        probes.append(
+            {
+                "href": item.get("href"),
+                "url": url,
+                "status": status,
+                "text": item.get("text"),
+            }
+        )
+    return {"links": probes}
+
+
+async def scan_images(page: Page) -> Dict[str, Any]:
+    """Scan images for accessibility issues such as missing alt text and unnamed clickables."""
+    return await page.evaluate(
+        r"""
+        () => {
+            const summarize = (el) => {
+                if (!el) return 'unknown';
+                const id = el.id ? `#${el.id}` : '';
+                const classes = (typeof el.className === 'string' && el.className.length > 0)
+                    ? '.' + el.className.trim().split(/\s+/).filter(Boolean).join('.')
+                    : '';
+                const tag = el.tagName ? el.tagName.toLowerCase() : 'node';
+                const label = (tag + id + classes).trim();
+                return label || tag;
+            };
+
+            const images = Array.from(document.querySelectorAll('img'));
+            const missingAlt = images.filter(
+                img => !(img.getAttribute('alt') || '').trim()
+            ).map(img => ({
+                src: img.getAttribute('src'),
+                selector: summarize(img)
+            }));
+
+            const clickableSelectors = Array.from(document.querySelectorAll(
+                'button, a, [role=\"button\"], [tabindex]'
+            ));
+            const withoutName = clickableSelectors.filter(el => {
+                const hasText = (el.innerText || '').trim().length > 0;
+                const hasAria = (el.getAttribute('aria-label') || '').trim().length > 0;
+                return !(hasText || hasAria);
+            }).map(summarize);
+
+            return {
+                img_missing_alt_count: missingAlt.length,
+                missing_alt_examples: missingAlt.slice(0, 4),
+                clickables_without_name: withoutName,
+            };
+        }
+        """
+    )
+
+
+async def measure_target(page: Page, selector: str) -> Dict[str, Any]:
+    """Measure width/height of a target element."""
+    bbox = await get_bounding_client_rect(page, selector)
+    return {"selector": selector, "bbox": bbox}
+
+
+async def detect_overlap(page: Page, selector: str) -> Dict[str, Any]:
+    """Detect elements overlapping the center point of ``selector``."""
+    overlaps = await page.evaluate(
+        r"""
+        (sel) => {
+            const el = document.querySelector(sel);
+            if (!el) return [];
+            const rect = el.getBoundingClientRect();
+            if (!rect) return [];
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const topEl = document.elementFromPoint(centerX, centerY);
+            if (topEl && topEl !== el) {
+                const id = topEl.id ? `#${topEl.id}` : '';
+                const classes = (typeof topEl.className === 'string' && topEl.className.length > 0)
+                    ? '.' + topEl.className.trim().split(/\s+/).filter(Boolean).join('.')
+                    : '';
+                const tag = topEl.tagName ? topEl.tagName.toLowerCase() : 'node';
+                const selectorHint = (tag + id + classes).trim() || tag;
+                return [{"selector": selectorHint}];
+            }
+            return [];
+        }
+        """,
+        selector,
+    )
+    return {"selector": selector, "overlaps": overlaps}
+
+
 async def dblclick(page: Page, selector: str) -> Dict[str, Any]:
     """Double-click the element matching ``selector``."""
     await _ensure_visible(page, selector)
@@ -227,6 +338,71 @@ async def select_option(
         selector, values if len(values) > 1 else values[0]
     )
     return {"ok": True, "selected": [item for item in selected if item is not None]}
+
+
+async def assert_text(page: Page, selector: str, contains: str) -> Dict[str, Any]:
+    """Assert that the element text includes ``contains``."""
+    if not contains:
+        raise ValueError("contains is required.")
+    await page.wait_for_selector(selector, state="visible")
+    text = await page.text_content(selector) or ""
+    if contains not in text:
+        raise ValueError(f"Expected '{contains}' in text for selector '{selector}'. Found: '{text}'.")
+    return {"ok": True, "text": text}
+
+
+async def check_link(page: Page, selector: str, label: Optional[str] = None) -> Dict[str, Any]:
+    """Fetch the status code for the link matching ``selector``."""
+    info = await page.evaluate(
+        """
+        (sel) => {
+            const el = document.querySelector(sel);
+            if (!el) throw new Error(`Element not found for selector: ${sel}`);
+            return {
+                href: el.getAttribute('href'),
+                url: el.href,
+                text: (el.innerText || '').trim()
+            };
+        }
+        """,
+        selector,
+    )
+    status = 0
+    try:
+        if info.get("url"):
+            response = await page.request.get(info["url"])
+            status = response.status
+    except Exception:
+        status = 0
+    info.update({"status": status, "label": label})
+    return info
+
+
+async def check_disabled(page: Page, selector: str) -> Dict[str, Any]:
+    """Return whether the element appears disabled."""
+    disabled = await page.evaluate(
+        """
+        (sel) => {
+            const el = document.querySelector(sel);
+            if (!el) throw new Error(`Element not found for selector: ${sel}`);
+            const aria = el.getAttribute('aria-disabled');
+            if (aria && aria.toLowerCase() === 'true') return true;
+            if (el.disabled !== undefined) return Boolean(el.disabled);
+            return el.hasAttribute('disabled');
+        }
+        """,
+        selector,
+    )
+    return {"selector": selector, "disabled": bool(disabled)}
+
+
+async def count_elements(page: Page, selector: str) -> Dict[str, Any]:
+    """Count elements matching ``selector``."""
+    count = await page.evaluate(
+        "(sel) => document.querySelectorAll(sel).length",
+        selector,
+    )
+    return {"selector": selector, "count": int(count)}
 
 
 async def drag_and_drop(page: Page, source: str, target: str) -> Dict[str, Any]:

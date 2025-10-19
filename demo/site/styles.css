@@ -1,22 +1,10 @@
 body {
-  margin: 40px;
+  margin: 0;
   font-family: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
   font-size: 18px;
   line-height: 1.6;
-  background: #f5f6fa;
+  background: #f3f6fb;
   color: #1f2b45;
-}
-
-h1 {
-  font-size: 2.6rem;
-  margin-bottom: 0.75rem;
-  color: #13203b;
-}
-
-p {
-  margin: 0 0 1.25rem;
-  max-width: 62ch;
-  font-size: 1.1rem;
 }
 
 a {
@@ -32,6 +20,60 @@ a:hover {
 button {
   font-family: inherit;
   border: none;
+  cursor: pointer;
+}
+
+.hero {
+  padding: 3rem clamp(2rem, 5vw, 4rem);
+  background: linear-gradient(135deg, #eef3ff, #dbe6ff);
+  border-bottom: 1px solid rgba(26, 43, 69, 0.08);
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2.6rem, 6vw, 3.4rem);
+  color: #13203b;
+}
+
+.hero p {
+  margin: 1rem 0 0;
+  max-width: 70ch;
+  font-size: 1.1rem;
+}
+
+main {
+  padding: clamp(2.5rem, 5vw, 4rem);
+  display: grid;
+  gap: clamp(2rem, 4vw, 3rem);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.panel {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: clamp(1.8rem, 4vw, 2.5rem);
+  box-shadow: 0 18px 36px rgba(19, 32, 59, 0.08);
+  border: 1px solid rgba(26, 43, 69, 0.08);
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1.9rem;
+  color: #162547;
+}
+
+.panel p {
+  margin: 0 0 1.25rem;
+  max-width: 70ch;
+}
+
+.actions .controls {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 1.5rem;
 }
 
 .cta {
@@ -39,27 +81,33 @@ button {
   align-items: center;
   justify-content: center;
   padding: 1rem 2.5rem;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #ffd147;
   color: #1f2b45;
   transform: scale(1.00);
-  transition: transform 75ms linear;
+  transition: transform 75ms linear, background 0.2s ease;
 }
 
 .cta:hover {
   transform: scale(1.02);
 }
 
-.tiny-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  background: #ffffff;
-  color: #1f2b45;
-  font-size: 0.8rem;
+.cta.secondary {
+  background: #d9f2ff;
+  color: #164a68;
+}
+
+.cta.tertiary {
+  background: #fce4d6;
+  color: #7a2f09;
+}
+
+.cta.disabled {
+  background: #d6dae4;
+  color: #697286;
+  cursor: not-allowed;
 }
 
 .clicked:focus,
@@ -68,20 +116,12 @@ button {
   color: #ffffff;
 }
 
-img {
-  display: block;
-  margin: 1.5rem 0;
-  max-width: min(320px, 80vw);
-  border-radius: 12px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-}
-
 .overlay {
   position: absolute;
-  top: 95px;
+  top: 58px;
   left: 140px;
-  width: 120px;
-  height: 36px;
+  width: 130px;
+  height: 38px;
   background: #e74c3c;
   color: #ffffff;
   pointer-events: none;
@@ -92,5 +132,118 @@ img {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08rem;
+  border-radius: 20px;
+}
+
+.activity-log {
+  background: #f0f4ff;
+  border: 1px solid rgba(26, 43, 69, 0.08);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  font-size: 0.95rem;
+  color: #243250;
+}
+
+.tiny-zone {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+}
+
+.tiny-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  color: #1f2b45;
+  font-size: 0.75rem;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.links a {
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: #eef3ff;
+  font-size: 0.95rem;
+}
+
+.links a.broken {
+  background: #ffe5e5;
+  color: #a02222;
+}
+
+.prompt ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.prompt code {
+  background: rgba(26, 43, 69, 0.06);
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.evidence-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.shot-placeholder {
+  height: 180px;
   border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.shot-placeholder.before {
+  background: #d9e4ff;
+  color: #1a2e60;
+}
+
+.shot-placeholder.after {
+  background: #ffe0cc;
+  color: #63331a;
+}
+
+.evidence figcaption {
+  font-size: 0.95rem;
+  color: #304160;
+  margin-top: 0.75rem;
+}
+
+footer {
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #4b5878;
+  background: #e9eef9;
+  border-top: 1px solid rgba(26, 43, 69, 0.08);
+}
+
+@media (max-width: 720px) {
+  .overlay {
+    top: 110px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .links {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

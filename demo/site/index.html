@@ -1,27 +1,104 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>CodeUse Demo Page</title>
+  <title>CodeUse Audit Demo</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <h1>CodeUse Demo</h1>
-  <p>Page includes intentional UX issues for the audit demo.</p>
+  <header class="hero">
+    <h1>Launch Readiness Console</h1>
+    <p>
+      This mini experience mirrors a real audit: we trigger a primary CTA, probe the page for
+      accessibility issues, and capture screenshots so stakeholders can see what changed.
+    </p>
+  </header>
 
-  <button id="btn1" class="cta">Primary CTA</button>
-  <div class="overlay">overlay</div>
+  <main>
+    <section class="panel actions">
+      <h2>Interactive Controls</h2>
+      <p>
+        Click the good paths to see the activity log update. The blocked control stays disabled to
+        highlight error handling.
+      </p>
+      <div class="controls">
+        <button id="btn1" class="cta">Start Launch Checklist</button>
+        <div class="overlay">overlay</div>
 
-  <p><a href="/dead-link-404">Broken link (404)</a></p>
-  <img src="https://via.placeholder.com/150">
+        <button class="cta secondary" data-action="briefing">Send Briefing</button>
+        <button class="cta tertiary" data-action="notify">Notify Stakeholders</button>
+        <button class="cta disabled" aria-disabled="true">Deploy Patch (disabled)</button>
+      </div>
+      <div class="activity-log" id="activity-log">
+        Actions appear here after each successful click.
+      </div>
+      <div class="tiny-zone">
+        <span>Micro control under test:</span>
+        <button class="tiny-btn">OK</button>
+      </div>
+      <div class="links">
+        <a class="working" href="https://www.example.com/dashboard">Executive dashboard</a>
+        <a class="working" href="https://status.example.com/incidents">Incident history</a>
+        <a class="broken" href="/dead-link-404">Hotfix instructions (404)</a>
+      </div>
+    </section>
 
-  <button class="tiny-btn">OK</button>
+    <section class="panel prompt">
+      <h2>Audit Checklist Prompt</h2>
+      <p>
+        The executor receives a prompt like the one below. It drives each browser action so the
+        automated audit mirrors what a human reviewer would check.
+      </p>
+      <ol>
+        <li>Open the target page at <code>&lt;URL&gt;</code>.</li>
+        <li>Hover the primary CTA (<code>#btn1</code>) and capture hover metrics.</li>
+        <li>Scan every link and record broken responses.</li>
+        <li>Inspect images and interactive controls for missing labels.</li>
+        <li>Measure the micro target (<code>.tiny-btn</code>) to confirm touch size.</li>
+        <li>Detect elements overlapping <code>#btn1</code>.</li>
+      </ol>
+    </section>
+
+    <section class="panel evidence">
+      <h2>Why Screenshots Matter</h2>
+      <p>
+        We keep both the before and after states so anyone reviewing the report can see exactly what
+        changed when an action ran. This is critical when the UI shifts during hover or a modal
+        opens unexpectedly.
+      </p>
+      <div class="evidence-grid">
+        <figure>
+          <div class="shot-placeholder before">Before action screenshot</div>
+          <figcaption>
+            Baseline state captured right after page load. Use it to confirm the CTA was visible and
+            unclicked.
+          </figcaption>
+        </figure>
+        <figure>
+          <div class="shot-placeholder after">After hover screenshot</div>
+          <figcaption>
+            Hover state recorded after measuring animation. Differences call out overlap and styling
+            regressions.
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 CodeUse · Demo data for automated accessibility audits.</p>
+  </footer>
 
   <script>
     const trackedButtons = document.querySelectorAll("button");
     trackedButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (btn.hasAttribute("aria-disabled")) return;
         btn.classList.add("clicked");
+        const log = document.getElementById("activity-log");
+        if (!log) return;
+        const label = btn.dataset.action || btn.textContent?.trim() || "Action";
+        log.textContent = `${label} recorded at ${new Date().toLocaleTimeString()}`;
       });
     });
   </script>

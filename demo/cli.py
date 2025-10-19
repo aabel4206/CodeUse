@@ -7,11 +7,11 @@ import json
 import os
 import pathlib
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
+import httpx
 from dotenv import load_dotenv
 
-from tool.executor.executor import run_audit
 from tool.pipeline.bridge import process_executor_result
 
 
@@ -25,6 +25,150 @@ def _load_prompt(path: Optional[str]) -> tuple[Optional[str], Optional[Dict[str,
     data = json.loads(prompt_path.read_text(encoding="utf-8"))
     title = data.get("title") or data.get("task") or "Gemini CU Task"
     return title, data
+
+
+def _replace_url_tokens(raw_url: Optional[str], target_url: Optional[str]) -> Optional[str]:
+    if not raw_url:
+        return target_url
+    if "<URL>" in raw_url:
+        if target_url:
+            return raw_url.replace("<URL>", target_url)
+        return None
+    return raw_url
+
+
+def _infer_selector(prompt: Optional[Dict[str, Any]], fallback: str = "#btn1") -> str:
+    if not prompt:
+        return fallback
+    candidate = prompt.get("target_selector")
+    if isinstance(candidate, str) and candidate.strip():
+        return candidate.strip()
+    for step in prompt.get("steps", []) or []:
+        selector = step.get("selector")
+        if isinstance(selector, str) and selector.strip():
+            return selector.strip()
+    return fallback
+
+
+def _build_exec_payload(
+    prompt: Optional[Dict[str, Any]],
+    target_url: Optional[str],
+    slow_ms: int,
+) -> Dict[str, Any]:
+    steps: List[Dict[str, Any]] = list((prompt or {}).get("steps", []) or [])
+    actions: List[Dict[str, Any]] = []
+    selector = (prompt or {}).get("target_selector")
+    selector = selector if isinstance(selector, str) and selector.strip() else None
+    measure_hover = False
+    effective_url = target_url
+    initial_url_set = False
+
+    for idx, step in enumerate(steps):
+        action_name = (step.get("action") or "").strip().lower()
+        if not action_name:
+            continue
+
+        if action_name == "go_to":
+            resolved = _replace_url_tokens(step.get("url"), target_url)
+            if resolved:
+                if not initial_url_set:
+                    effective_url = resolved
+                    initial_url_set = True
+                else:
+                    actions.append({"fn": "navigate", "args": {"url": resolved}})
+        elif action_name == "hover":
+            sel = step.get("selector") or selector
+            if isinstance(sel, str) and sel.strip():
+                selector = sel.strip()
+                actions.append({"fn": "hover", "args": {"selector": selector}})
+            measure_hover = True
+        elif action_name == "scan_links":
+            actions.append({"fn": "scan_links", "args": {}})
+        elif action_name == "scan_images":
+            actions.append({"fn": "scan_images", "args": {}})
+        elif action_name == "measure_target":
+            sel = step.get("selector")
+            if isinstance(sel, str) and sel.strip():
+                actions.append({"fn": "measure_target", "args": {"selector": sel.strip()}})
+        elif action_name == "detect_overlap":
+            sel = step.get("selector")
+            if isinstance(sel, str) and sel.strip():
+                actions.append({"fn": "detect_overlap", "args": {"selector": sel.strip()}})
+        elif action_name == "read_computed_style":
+            sel = step.get("selector")
+            if isinstance(sel, str) and sel.strip():
+                args = {"selector": sel.strip()}
+                pseudo = step.get("pseudo")
+                if isinstance(pseudo, str) and pseudo.strip():
+                    args["pseudo"] = pseudo.strip()
+                actions.append({"fn": "get_computed_style", "args": args})
+        elif action_name == "screenshot":
+            label = step.get("label") or f"step-{idx + 1}-screenshot"
+            actions.append({"fn": "screenshot", "args": {"label": label}})
+        elif action_name == "click":
+            sel = step.get("selector")
+            if isinstance(sel, str) and sel.strip():
+                actions.append({"fn": "click", "args": {"selector": sel.strip()}})
+        elif action_name == "assert_text":
+            sel = step.get("selector")
+            contains = step.get("contains") or step.get("text")
+            if (
+                isinstance(sel, str)
+                and sel.strip()
+                and isinstance(contains, str)
+                and contains.strip()
+            ):
+                actions.append(
+                    {
+                        "fn": "assert_text",
+                        "args": {"selector": sel.strip(), "contains": contains.strip()},
+                    }
+                )
+        elif action_name == "check_link":
+            sel = step.get("selector")
+            if isinstance(sel, str) and sel.strip():
+                payload = {"selector": sel.strip()}
+                label = step.get("label")
+                if isinstance(label, str) and label.strip():
+                    payload["label"] = label.strip()
+                actions.append({"fn": "check_link", "args": payload})
+        elif action_name == "check_disabled":
+            sel = step.get("selector")
+            if isinstance(sel, str) and sel.strip():
+                actions.append({"fn": "check_disabled", "args": {"selector": sel.strip()}})
+        elif action_name == "read_text":
+            sel = step.get("selector")
+            if isinstance(sel, str) and sel.strip():
+                actions.append({"fn": "get_text", "args": {"selector": sel.strip()}})
+        elif action_name == "count_elements":
+            sel = step.get("selector")
+            if isinstance(sel, str) and sel.strip():
+                actions.append({"fn": "count_elements", "args": {"selector": sel.strip()}})
+
+    selector = selector or _infer_selector(prompt)
+    if not measure_hover and selector:
+        measure_hover = True
+
+    if not actions:
+        selector = selector or "#btn1"
+        actions = [
+            {"fn": "hover", "args": {"selector": selector}},
+            {"fn": "scan_links", "args": {}},
+            {"fn": "scan_images", "args": {}},
+            {"fn": "measure_target", "args": {"selector": ".tiny-btn"}},
+            {"fn": "detect_overlap", "args": {"selector": selector}},
+        ]
+        measure_hover = True
+
+    payload = {
+        "url": effective_url or target_url,
+        "actions": actions,
+        "selector": selector or "#btn1",
+        "step": 1,
+        "measure_hover": bool(measure_hover),
+        "slow_ms": max(int(slow_ms or 0), 0),
+    }
+    return payload
 
 
 def _write_ui_json(result_json_path: str, ui_payload: Dict[str, Any]) -> str:
@@ -62,8 +206,33 @@ def main() -> int:
         if not args.url:
             print("--url is required when not using --executor-json")
             return 2
-        print(f"Running executor against {args.url} (slow_ms={args.slow_ms}) ...")
-        raw = run_audit(target_url=args.url, run_id=None, slow_ms=max(args.slow_ms, 0))
+
+        exec_payload = _build_exec_payload(prompt, args.url, args.slow_ms)
+        if not exec_payload.get("url"):
+            print("Unable to determine target URL for executor request.")
+            return 2
+
+        base_url = (os.getenv("EXECUTOR_BASE_URL") or "http://localhost:8001").rstrip("/")
+        endpoint = f"{base_url}/execute"
+        print(f"Calling executor at {endpoint} ...")
+
+        try:
+            response = httpx.post(endpoint, json=exec_payload, timeout=httpx.Timeout(60.0))
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            print(f"Executor request failed: {exc}")
+            resp = getattr(exc, "response", None)
+            if resp is not None:
+                try:
+                    print(resp.text)
+                except Exception:
+                    pass
+            return 1
+        except Exception as exc:
+            print(f"Executor request failed: {exc}")
+            return 1
+
+        raw = response.json()
 
     bridge_out = process_executor_result(raw, user_prompt=title)
     ui_path = _write_ui_json(bridge_out.result_json_path, bridge_out.ui_payload)
@@ -87,7 +256,7 @@ def main() -> int:
     print("CTA:          ", cta_selector)
     print("Success:      ", bridge_out.audit.success)
     print("Issue types:  ", issue_counts or {})
-    
+
     # Display improvement prompts if available
     if issues:
         print("\n=== IMPROVEMENT PROMPTS ===")
@@ -104,4 +273,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
