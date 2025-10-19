@@ -1,41 +1,129 @@
-# CodeUse Demo Instructions
+# 🧠 CodeUse Audit Tool — CLI Demo (Checkpoint)
 
-## Serve the demo page
+This demo runs the full pipeline
+**Executor → Adapter → Aggregator → Reporter**
+without the web UI.
+It launches a test page, performs a slow-motion audit, and writes results to `runs/<run_id>/`.
+
+---
+
+## 1️⃣ Setup
+
+### Requirements
+
+* **Python ≥ 3.10**
+* **Pip** installed
+* **Playwright** runtime (Chromium)
+* `.env` file with your OpenRouter key
+
+### Install dependencies
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+If Playwright isn’t installed yet:
+
+```bash
+python3 -m playwright install chromium
+```
+
+> 💡 **If `playwright` command not found:**
+> Use `npx playwright install chromium` instead — this pulls Playwright via Node JS without touching your Python env.
+
+---
+
+## 2️⃣ Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+OPENROUTER_API_KEY=<your_key>
+OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
+```
+
+---
+
+## 3️⃣ Start the Test Page
+
+From a new terminal:
 
 ```bash
 cd demo/site
-python -m http.server 5173
+python3 -m http.server 5173
 ```
 
-The page will be available at <http://localhost:5173> and intentionally contains
-hover, link, alt-text, and sizing issues for the auditor to detect.
+You can visit the page at
+👉 `http://localhost:5173`
 
-## Run the slow-motion CLI against the live page
+---
+
+## 4️⃣ Run the Full Audit
+
+From the project root:
 
 ```bash
 export PYTHONPATH="$(pwd)"
-python demo/cli.py --url http://localhost:5173 --prompt-file demo/prompts/full_page_audit.json --slow-ms 800
+
+python3 demo/cli.py \
+  --url http://localhost:5173 \
+  --prompt-file demo/prompts/full_page_audit.json \
+  --slow-ms 800
 ```
 
-## Use a saved executor blob
+* `--url` → page to audit
+* `--prompt-file` → Gemini-style JSON of actions
+* `--slow-ms` → delay (ms) between Playwright steps for narration
+
+---
+
+## 5️⃣ Outputs
+
+When complete, you’ll see a summary like:
+
+```
+=== DEMO SUMMARY ===
+Run ID:        d230d34c
+Result JSON:   runs/d230d34c/result.json
+UI JSON:       runs/d230d34c/ui.json
+Target URL:    http://localhost:5173/
+CTA:           #btn1
+Success:       False
+Issue types:   {'hover_animation':1,'small_click_target':1,'console_error':1,'broken_link':1,'missing_alt':1}
+```
+
+Files are written to:
+
+```
+runs/<run_id>/result.json
+runs/<run_id>/ui.json
+```
+
+---
+
+## 6️⃣ Common Issues
+
+| Error                                     | Fix                                             |
+| ----------------------------------------- | ----------------------------------------------- |
+| `ModuleNotFoundError: dotenv`             | `pip install python-dotenv`                     |
+| `TypeError: 'str' object is not callable` | Update to latest branch (executor patch)        |
+| `playwright: command not found`           | Run `npx playwright install chromium`           |
+| Browser never opens                       | Re-run `python3 -m playwright install chromium` |
+| SyntaxWarning `\s`                        | Harmless; raw strings now used                  |
+
+---
+
+## 7️⃣ Re-run Quickly
+
+To repeat a run with different speed:
 
 ```bash
-python demo/cli.py --executor-json examples/executor_out.json --prompt-file demo/prompts/hover_audit.json --slow-ms 800
+python3 demo/cli.py --url http://localhost:5173 --slow-ms 500
 ```
 
-## Outputs
+---
 
-- `runs/<run_id>/result.json` — canonical audit output for the orchestrator.
-- `runs/<run_id>/ui.json` — condensed payload for the demo frontend.
+### ✅ That’s it!
 
-The CLI prints a concise summary and echoes the Gemini CU prompt (if provided)
-for narration during recorded demos. The backend continues to use the existing
-Role C pipeline (adapter → aggregator → reporter → bridge).
-
-## One-time setup on a fresh machine
-
-```bash
-pip install -r requirements.txt
-python -m playwright install chromium
-```
-
+You now have a fully working, **CLI-only demo** of the CodeUse Google Computer Use orchestration pipeline.
+The next step for the UI team is to visualize `ui.json` in the static viewer.
