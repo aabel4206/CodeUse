@@ -1,5 +1,6 @@
 """Main orchestration loop for the CodeUse tool."""
 
+import asyncio
 import json
 import time
 import uuid
@@ -15,7 +16,7 @@ try:  # Load environment variables from .env when available
 except Exception:
     pass
 
-from .state import State, save_observation, save_result, update_status
+from .state import save_observation, save_result, update_status
 from tool.orchestrator.state import ProbeEvent
 
 # Normalization, aggregation, and persistence helpers
@@ -111,7 +112,25 @@ async def run_task(
                 break
         except Exception as e:
             errors.append(f"executor_error.attempt_{attempt}: {e}")
-            time.sleep(0.35)
+            await asyncio.sleep(0.35)
+
+    observation_payload: Dict[str, Any] = {}
+    executor_results: List[Dict[str, Any]] = []
+    executor_errors: List[str] = []
+    executor_ok = False
+
+    if isinstance(exec_result, dict):
+        observation_payload = exec_result.get("observation") or {}
+        if isinstance(observation_payload, dict):
+            executor_errors = list(observation_payload.get("errors") or [])
+        raw_results = exec_result.get("results") or []
+        if isinstance(raw_results, list):
+            executor_results = [r for r in raw_results if isinstance(r, dict)]
+        executor_ok = (
+            bool(exec_result)
+            and not executor_errors
+            and all(bool(r.get("ok", True)) for r in executor_results)
+        )
 
     # Record observation (even on failure we store what we tried)
     observation = {
@@ -119,6 +138,7 @@ async def run_task(
         "actions": actions,
         "exec_payload": exec_payload,
         "executor_result": exec_result,
+        "executor_ok": executor_ok,
         "errors": errors,
         "timestamp": time.time(),
     }
@@ -127,19 +147,48 @@ async def run_task(
     # -----------------------
     # 5) Finalize
     # -----------------------
-    if not exec_result or not exec_result.get("ok", False):
-        # Failure
+    if not executor_ok:
+        errors.extend(executor_errors)
         result = _finalize_failure(run_dir, run_id, errors=errors, observations=[observation])
         return result
 
-    # Success (goal evaluation is handled inside executor loop per your note)
-    result = {
+    primary_cta, probe_event_dict = normalize_with_openrouter(exec_result)
+    probe_events: List[ProbeEvent] = []
+    if probe_event_dict:
+        try:
+            probe_events.append(ProbeEvent.model_validate(probe_event_dict))
+        except Exception:
+            pass
+
+    artifacts = {
+        "screenshots": observation_payload.get("screenshots"),
+        "screenshot": observation_payload.get("screenshot"),
+        "executor_run_id": exec_result.get("run_id"),
+        "results": executor_results,
+        "observation": observation_payload,
+        "action_log": str(run_dir / "step-1.json"),
+    }
+
+    audit = build_audit_result(
+        run_id=run_id,
+        target_url=exec_payload["url"],
+        primary_cta=primary_cta,
+        probe_events=probe_events,
+        console_lines=observation_payload.get("console", []) or [],
+        link_probes=observation_payload.get("link_probes", []) or [],
+        dom_scan=observation_payload.get("dom_scan"),
+        artifacts=artifacts,
+    )
+    audit_path = write_result_json(str(run_dir), audit)
+
+    final_url = observation_payload.get("url") or exec_payload["url"]
+    orchestrator_result = {
         "run_id": run_id,
         "success": True,
         "summary": {
             "target_met": True,          # executor judged it; we accept for MVP
             "steps_used": 1,
-            "final_url": exec_result.get("metrics", {}).get("url") or exec_result.get("url"),
+            "final_url": final_url,
             "selector": task_spec.get("target_selector"),
         },
         "observations": [observation],
@@ -147,11 +196,14 @@ async def run_task(
         "artifacts": {
             "screenshots_dir": str(run_dir),
             "action_log": str(run_dir / "step-1.json"),
+            "audit_path": audit_path,
         },
+        "audit": audit.model_dump(),
     }
-    save_result(run_dir, result)
+    summary_path = run_dir / "orchestrator_result.json"
+    _save_json(summary_path, orchestrator_result)
     update_status(run_dir, {"state": "done", "step": 1, "success": True})
-    return result
+    return orchestrator_result
 
 
 # -----------------------

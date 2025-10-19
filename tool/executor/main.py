@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, HttpUrl
@@ -44,18 +44,22 @@ async def execute(req: ExecRequest):
 
     try:
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=False)
+            browser = await playwright.chromium.launch(headless=False, slow_mo=500)
             page = await browser.new_page()
             page.set_default_timeout(5000)  # 5s per Playwright op
 
             await page.goto(str(req.url), timeout=10_000)
-            screenshots: List[Dict[str, Any]] = []
-            before_path = await actions.screenshot(
-                page, run_id, f"step-{req.step}-before"
-            )
-            screenshots.append({"label": "before", "path": before_path})
 
-            for index, call in enumerate(req.actions, start=1):
+            selector_wait_error: Optional[str] = None
+            try:
+                await actions.wait_for_selector(page, req.selector, state="visible")
+            except ValueError as exc:
+                selector_wait_error = str(exc)
+                errors.append(selector_wait_error)
+
+            before_path = await actions.screenshot(page, run_id, f"step-{req.step}-before")
+
+            for call in req.actions:
                 action_fn = getattr(actions, call.fn, None)
                 if action_fn is None:
                     msg = f"Unknown action: {call.fn}"
@@ -70,35 +74,29 @@ async def execute(req: ExecRequest):
                     msg = f"Action {call.fn} failed: {exc}"
                     results.append({"fn": call.fn, "ok": False, "error": str(exc)})
                     errors.append(msg)
-                finally:
-                    label = f"step-{req.step}-after-action-{index}"
-                    try:
-                        shot_path = await actions.screenshot(page, run_id, label)
-                        screenshots.append(
-                            {"label": f"after_action_{index}", "path": shot_path}
-                        )
-                    except (PlaywrightTimeout, PlaywrightError, Exception) as shot_exc:
-                        errors.append(
-                            f"Screenshot after action {call.fn} failed: {shot_exc}"
-                        )
 
-            if req.measure_hover:
-                metrics = await actions.measure_hover_metrics(page, req.selector)
+            metrics: Dict[str, Any] = {}
+            if selector_wait_error is None:
+                if req.measure_hover:
+                    metrics = await actions.measure_hover_metrics(page, req.selector)
+                else:
+                    metrics = {
+                        "before": await actions.get_computed_style(page, req.selector, ""),
+                        "after": await actions.get_computed_style(page, req.selector, ":hover"),
+                    }
             else:
-                metrics = {
-                    "before": await actions.get_computed_style(page, req.selector, ""),
-                    "after": await actions.get_computed_style(page, req.selector, ":hover"),
-                }
+                metrics = {"selector_error": selector_wait_error}
 
-            last_screenshot = (
-                screenshots[-1]["path"] if screenshots else before_path
-            )
+            after_path = await actions.screenshot(page, run_id, f"step-{req.step}-after")
 
             observation = {
                 "selector": req.selector,
                 "metrics": metrics,
-                "screenshots": screenshots,
-                "screenshot": last_screenshot,
+                "screenshots": {
+                    "before": before_path,
+                    "after": after_path,
+                },
+                "screenshot": after_path,
                 "url": await actions.current_url(page),
                 "errors": errors,
             }
