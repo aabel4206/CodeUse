@@ -1,0 +1,187 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+  background: #0b1024;
+  color: #e5ecff;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1;
+  padding: clamp(2.5rem, 5vw, 4.5rem);
+  display: grid;
+  gap: clamp(2rem, 4vw, 3.5rem);
+}
+
+.hero {
+  padding: clamp(2.5rem, 6vw, 4rem);
+  background: linear-gradient(135deg, rgba(66, 84, 255, 0.12), rgba(66, 84, 255, 0.32));
+  border-bottom: 1px solid rgba(155, 168, 255, 0.2);
+  text-align: center;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2.8rem, 5vw, 3.6rem);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+}
+
+.hero p {
+  margin: 1rem auto 0;
+  max-width: 58ch;
+  font-size: 1.2rem;
+  color: rgba(229, 236, 255, 0.85);
+}
+
+.controls {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.control-btn {
+  padding: 1.2rem 1.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.control-btn.primary {
+  background: linear-gradient(135deg, #55ffd7, #52d3ff);
+  color: #061025;
+}
+
+.control-btn.secondary {
+  background: linear-gradient(135deg, #8bc6ff, #a491ff);
+  color: #10163a;
+}
+
+.control-btn.tertiary {
+  background: linear-gradient(135deg, #ffe566, #ff9a62);
+  color: #2b1400;
+}
+
+.control-btn.problematic {
+  background: linear-gradient(135deg, rgba(255, 99, 132, 0.45), rgba(255, 82, 82, 0.2));
+  color: rgba(229, 236, 255, 0.55);
+  border: 2px dashed rgba(255, 99, 132, 0.55);
+  cursor: not-allowed;
+  filter: grayscale(0.2);
+  position: relative;
+}
+
+.control-btn.completed {
+  filter: saturate(1.2);
+  box-shadow: 0 22px 44px rgba(85, 255, 215, 0.35);
+  transform: translateY(-2px);
+}
+
+.control-btn:not(.problematic):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 48px rgba(95, 165, 255, 0.35);
+}
+
+.status {
+  background: rgba(8, 16, 48, 0.8);
+  border: 1px solid rgba(107, 128, 255, 0.2);
+  border-radius: 28px;
+  padding: clamp(1.8rem, 4vw, 2.5rem);
+  box-shadow: 0 28px 52px rgba(0, 0, 0, 0.35);
+}
+
+.status h2,
+.activity h2 {
+  margin: 0 0 1.4rem;
+  font-size: 1.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.status ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1.1rem;
+}
+
+.status a {
+  color: #82c8ff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.status a:hover {
+  text-decoration: underline;
+}
+
+.status a.broken {
+  color: #ff8484;
+}
+
+.tag {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 132, 132, 0.2);
+  color: #ffa5a5;
+  margin-left: 0.65rem;
+}
+
+.activity {
+  background: rgba(12, 24, 64, 0.9);
+  border: 1px solid rgba(142, 162, 255, 0.2);
+  border-radius: 28px;
+  padding: clamp(1.8rem, 4vw, 2.4rem);
+  box-shadow: 0 28px 52px rgba(0, 0, 0, 0.35);
+}
+
+.log {
+  font-family: "Fira Code", "Source Code Pro", monospace;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 16px;
+  padding: 1.25rem;
+  color: #b9d4ff;
+  min-height: 96px;
+  box-shadow: inset 0 0 0 1px rgba(120, 160, 255, 0.2);
+}
+
+footer {
+  text-align: center;
+  padding: 1.75rem;
+  font-size: 0.95rem;
+  color: rgba(191, 202, 247, 0.8);
+}
+
+footer a {
+  color: #8bc6ff;
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}

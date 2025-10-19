@@ -1,0 +1,11 @@
+{
+  "title": "UI Hover Tune — Primary CTA",
+  "task": "Open the page, find the primary call-to-action button, hover it, and report the final transform scale, transition duration (ms), and timing function. Take an after-hover screenshot.",
+  "steps": [
+    {"action": "go_to", "url": "<URL>"},
+    {"action": "hover", "selector": "#btn1"},
+    {"action": "read_computed_style", "selector": "#btn1", "properties": ["transform", "transition-duration", "transition-timing-function"]},
+    {"action": "screenshot", "label": "after_hover"}
+  ],
+  "expected_report_keys": ["scale_after", "duration_ms", "timing_function", "screenshot_path"]
+}

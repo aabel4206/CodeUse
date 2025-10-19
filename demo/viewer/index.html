@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CodeUse — Audit Viewer</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#9ca3af;
+            --ok:#16a34a; --med:#f59e0b; --high:#ef4444; --chip:#1f2937; }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 ui-sans-serif,system-ui; }
+    .wrap { max-width:960px; margin:32px auto; padding:0 16px; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .panel { background:var(--panel); border:1px solid #1f2937; border-radius:12px; padding:16px; }
+    .h { font-size:24px; font-weight:700; margin:0 0 8px; }
+    .muted { color:var(--muted) }
+    .pill { padding:4px 10px; border-radius:999px; background:var(--chip); font-weight:600; }
+    .pill.ok { background:rgba(22,163,74,.15); color:var(--ok); }
+    .pill.med { background:rgba(245,158,11,.15); color:var(--med); }
+    .pill.high{ background:rgba(239,68,68,.15); color:var(--high); }
+    .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
+    .card { border:1px solid #1f2937; border-radius:12px; padding:12px; background:#0b1220; }
+    .card h4 { margin:0 0 6px; font-size:16px }
+    code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    img.thumb { max-width:100%; border-radius:10px; border:1px solid #1f2937; margin-top:8px; }
+    a { color:#93c5fd; text-decoration:none; } a:hover{text-decoration:underline;}
+    .footer { margin-top:18px; font-size:12px }
+    input, button { background:#0b1220; color:var(--text); border:1px solid #1f2937; border-radius:8px; padding:8px 10px; }
+    button { cursor:pointer; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row" style="margin-bottom:12px">
+    <h1 class="h" style="margin-right:auto">CodeUse — Audit Viewer</h1>
+    <label class="muted">Run ID</label>
+    <input id="run" placeholder="e.g. d230d34c" />
+    <button id="load">Load</button>
+  </div>
+  <div id="header" class="panel"></div>
+  <div id="cta" class="panel" style="margin-top:12px"></div>
+  <div id="issues" class="panel" style="margin-top:12px"></div>
+  <div id="gallery" class="panel" style="margin-top:12px"></div>
+  <div class="footer muted">Tip: open with <code>http://localhost:5173</code> as test page; viewer expects <code>runs/&lt;run_id&gt;/ui.json</code> at this server root.</div>
+</div>
+<script>
+const $ = sel => document.querySelector(sel);
+const params = new URLSearchParams(location.search);
+const runInput = $('#run'); runInput.value = params.get('run') || '';
+$('#load').onclick = () => { const r = runInput.value.trim(); if(!r) return;
+  location.search = '?run=' + encodeURIComponent(r); };
+
+async function load() {
+  const run = new URLSearchParams(location.search).get('run');
+  if (!run) return;
+  const path = `runs/${run}/ui.json`;
+  try {
+    const res = await fetch(path); if(!res.ok) throw new Error(res.status);
+    const ui = await res.json();
+    render(ui, run);
+  } catch (e) {
+    $('#header').innerHTML = `<div class="muted">Could not load <code>${path}</code>: ${e}</div>`;
+  }
+}
+function pill(label, cls){ return `<span class="pill ${cls}">${label}</span>`; }
+function render(ui, run) {
+  const s = ui.header.severity_counts || {high:0,medium:0,low:0};
+  const ok = ui.header.success;
+  $('#header').innerHTML = `
+    <div class="row"><div>
+      <div class="h">Target: <a href="${ui.header.target_url}" target="_blank">${ui.header.target_url}</a></div>
+      <div class="muted">Run <span class="mono">${run}</span></div>
+    </div>
+    <div class="row">
+      ${pill(ok ? 'Success' : 'Issues found', ok ? 'ok':'high')}
+      ${pill('High: '+(s.high||0), 'high')}
+      ${pill('Medium: '+(s.medium||0), 'med')}
+      ${pill('Low: '+(s.low||0), '')}
+    </div></div>`;
+
+  const c = ui.cta;
+  $('#cta').innerHTML = c ? `
+    <div class="h">Primary CTA</div>
+    <div class="row">
+      <div>Selector: <code>${c.selector}</code></div>
+      <div class="muted">confidence ${c.confidence ?? '—'}</div>
+      <div class="muted">found_by ${c.found_by ?? '—'}</div>
+    </div>
+    ${c.rationale ? `<div class="muted" style="margin-top:8px">${c.rationale}</div>`:''}
+  ` : `<div class="h">Primary CTA</div><div class="muted">Not found.</div>`;
+
+  const ibt = ui.issues_by_type || {};
+  const cards = [];
+  Object.entries(ibt).forEach(([type, arr]) => {
+    arr.forEach(it => {
+      const sevCls = it.severity === 'high' ? 'high' : (it.severity === 'medium' ? 'med' : '');
+      cards.push(`
+        <div class="card">
+          <div class="row">
+            <h4>${type}</h4>
+            ${pill(it.severity, sevCls)}
+          </div>
+          <div class="muted">${it.selector ? `selector <code>${it.selector}</code> — `:''}${it.id}</div>
+          <div style="margin-top:6px">${it.summary || ''}</div>
+          ${it.suggested_fix ? `<div class="muted" style="margin-top:6px">suggested: ${it.suggested_fix}</div>`:''}
+          ${it.screenshot ? `<img class="thumb" src="${it.screenshot}" alt="evidence">`:''}
+        </div>
+      `);
+    });
+  });
+  $('#issues').innerHTML = `<div class="h">Issues</div><div class="grid">${cards.join('')}</div>`;
+
+  const gal = (ui.gallery || []).map(p => `<img class="thumb" src="${p}">`);
+  $('#gallery').innerHTML = `<div class="h">Gallery</div>${gal.length?gal.join(''):'<div class="muted">no screenshots</div>'}`;
+}
+load();
+</script>
+</body>
+</html>

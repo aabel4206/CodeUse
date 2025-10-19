@@ -373,12 +373,20 @@ def build_audit_result(
     has_high = any(i.severity == "high" for i in issues)
     success = not has_high
 
+    # Enhance issues with LLM-generated improvement prompts
+    try:
+        from tool.orchestrator.adapter import enhance_issues_with_llm
+        enhanced_issues = enhance_issues_with_llm(issues, target_url)
+    except Exception as e:
+        print(f"Warning: Failed to enhance issues with LLM: {e}")
+        enhanced_issues = issues
+
     audit = AuditResult(
         run_id=run_id,
         success=success,
         target_url=target_url,
         primary_cta=cta,
-        issues=issues,
+        issues=enhanced_issues,
         artifacts=artifacts or {},
     )
     return audit

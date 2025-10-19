@@ -22,7 +22,8 @@ class ReportGenerator:
                        run_id: str,
                        analysis_results: Dict[str, Any],
                        execution_results: Dict[str, Any],
-                       metadata: Dict[str, Any]) -> str:
+                       metadata: Dict[str, Any],
+                       issues: Optional[List[Dict[str, Any]]] = None) -> str:
         """
         Generate a comprehensive report for a run.
         
@@ -31,6 +32,7 @@ class ReportGenerator:
             analysis_results: Results from code analysis
             execution_results: Results from code execution
             metadata: Additional metadata about the run
+            issues: List of issues with improvement prompts
             
         Returns:
             Path to the generated report file
@@ -41,6 +43,7 @@ class ReportGenerator:
             'metadata': metadata,
             'analysis': analysis_results,
             'execution': execution_results,
+            'issues': issues or [],
             'summary': self._generate_summary(analysis_results, execution_results)
         }
         
@@ -123,6 +126,18 @@ class ReportGenerator:
                 for suggestion in analysis['suggestions']:
                     content.append(f"- 💡 {suggestion}")
                 content.append("")
+        
+        # Improvement Prompts (if available)
+        if 'issues' in report_data and report_data['issues']:
+            content.append("## Improvement Prompts")
+            content.append("AI-generated prompts to help improve the website:")
+            content.append("")
+            for issue in report_data['issues']:
+                if issue.get('improvement_prompt'):
+                    content.append(f"### {issue.get('type', 'Issue').replace('_', ' ').title()}")
+                    content.append(f"**Issue:** {issue.get('summary', 'N/A')}")
+                    content.append(f"**Improvement Prompt:** {issue['improvement_prompt']}")
+                    content.append("")
         
         # Execution Results
         if 'execution' in report_data:

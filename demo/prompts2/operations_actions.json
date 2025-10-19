@@ -1,0 +1,21 @@
+{
+  "title": "Trigger Operations Actions",
+  "task": "Open the Operations Command Hub, click each working action button, and confirm that the status feed updates accordingly. Skip the disabled budget report button.",
+  "steps": [
+    {"action": "go_to", "url": "<URL>"},
+    {"action": "click", "selector": "button[data-action='briefing']"},
+    {"action": "assert_text", "selector": "#action-output", "contains": "Daily briefing"},
+    {"action": "click", "selector": "button[data-action='incident']"},
+    {"action": "assert_text", "selector": "#action-output", "contains": "Incident tracker"},
+    {"action": "click", "selector": "button[data-action='notify']"},
+    {"action": "assert_text", "selector": "#action-output", "contains": "Stakeholders"},
+    {"action": "screenshot", "label": "actions_completed"}
+  ],
+  "expected_report_keys": [
+    "briefing_status",
+    "incident_status",
+    "notify_status",
+    "disabled_button_selector",
+    "screenshot_path"
+  ]
+}

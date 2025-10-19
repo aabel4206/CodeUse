@@ -120,6 +120,7 @@ class Issue(BaseModel):
     summary: str
     evidence: Dict[str, Any] = Field(default_factory=dict)
     suggested_fix: str
+    improvement_prompt: Optional[str] = None
 
 
 class AuditResult(BaseModel):

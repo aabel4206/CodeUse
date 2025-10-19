@@ -1,0 +1,19 @@
+{
+  "title": "Team Availability Snapshot",
+  "task": "Provide an availability summary for the product launch team, including counts of working vs. not working members and one example from each group.",
+  "steps": [
+    {"action": "go_to", "url": "<URL>"},
+    {"action": "read_text", "selector": ".member-card.online h3"},
+    {"action": "read_text", "selector": ".member-card.offline h3"},
+    {"action": "count_elements", "selector": ".member-card.online"},
+    {"action": "count_elements", "selector": ".member-card.offline"},
+    {"action": "screenshot", "label": "team_roster"}
+  ],
+  "expected_report_keys": [
+    "online_count",
+    "offline_count",
+    "online_example",
+    "offline_example",
+    "screenshot_path"
+  ]
+}
